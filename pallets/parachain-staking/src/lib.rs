@@ -1682,7 +1682,10 @@ pub mod pallet {
 			let collators = Pallet::<T>::selected_candidates().to_vec();
 			if collators.is_empty() {
 				// We never want to pass an empty set of collators. This would brick the chain.
-				log::error!("💥 keeping old session because of empty collator set!");
+				// Sessions 0, 1 are configured on genesis and use SessionConfig keys
+				if new_index > 1 {
+					log::error!("💥 keeping old session because of empty collator set!");
+				}
 				None
 			} else {
 				Some(collators)
