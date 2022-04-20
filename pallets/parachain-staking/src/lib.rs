@@ -1657,4 +1657,27 @@ pub mod pallet {
 			Self::selected_candidates()
 		}
 	}
+
+	impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
+		fn new_session(new_index: sp_staking::SessionIndex) -> Option<Vec<T::AccountId>> {
+			log::debug!(
+				"assembling new collators for new session {} at #{:?}",
+				new_index,
+				<frame_system::Pallet<T>>::block_number(),
+			);
+
+			let collators = Pallet::<T>::selected_candidates().to_vec();
+			if collators.is_empty() {
+				// We never want to pass an empty set of collators. This would brick the chain.
+				log::error!("💥 keeping old session because of empty collator set!");
+				None
+			} else {
+				Some(collators)
+			}
+		}
+
+		fn end_session(_end_index: sp_staking::SessionIndex) {}
+
+		fn start_session(_start_index: sp_staking::SessionIndex) {}
+	}
 }
