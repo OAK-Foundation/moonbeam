@@ -1658,6 +1658,19 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Pallet<T> {
+		// Add reward points to block authors:
+		// * 20 points to the block producer for producing a block in the chain
+		fn note_author(author: T::AccountId) {
+			let now = <Round<T>>::get().current;
+			let score_plus_20 = <AwardedPts<T>>::get(now, &author).saturating_add(20);
+			<AwardedPts<T>>::insert(now, author, score_plus_20);
+			<Points<T>>::mutate(now, |x| *x = x.saturating_add(20));
+		}
+
+		fn note_uncle(_author: T::AccountId, _age: T::BlockNumber) {}
+	}
+
 	impl<T: Config> pallet_session::SessionManager<T::AccountId> for Pallet<T> {
 		fn new_session(new_index: sp_staking::SessionIndex) -> Option<Vec<T::AccountId>> {
 			log::debug!(
