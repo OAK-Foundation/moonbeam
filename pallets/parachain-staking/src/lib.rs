@@ -1680,4 +1680,11 @@ pub mod pallet {
 
 		fn start_session(_start_index: sp_staking::SessionIndex) {}
 	}
+
+	impl<T: Config> pallet_session::ShouldEndSession<T::BlockNumber> for Pallet<T> {
+		fn should_end_session(now: T::BlockNumber) -> bool {
+			let round = <Round<T>>::get();
+			return round.should_update(now);
+		}
+	}
 }
