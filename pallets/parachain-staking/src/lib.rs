@@ -76,7 +76,7 @@ pub mod pallet {
 	use parity_scale_codec::Decode;
 	use sp_runtime::{
 		traits::{Saturating, Zero},
-		Perbill, Percent,
+		Perbill, Percent, Permill,
 	};
 	use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 
@@ -1685,6 +1685,38 @@ pub mod pallet {
 		fn should_end_session(now: T::BlockNumber) -> bool {
 			let round = <Round<T>>::get();
 			return round.should_update(now);
+		}
+	}
+
+	impl<T: Config> frame_support::traits::EstimateNextSessionRotation<T::BlockNumber> for Pallet<T> {
+		fn average_session_length() -> T::BlockNumber {
+			T::BlockNumber::from(<Round<T>>::get().length)
+		}
+
+		fn estimate_current_session_progress(now: T::BlockNumber) -> (Option<Permill>, Weight) {
+			let round = <Round<T>>::get();
+			let passed_blocks = now.saturating_sub(round.first);
+
+			(
+				Some(Permill::from_rational(
+					passed_blocks,
+					T::BlockNumber::from(round.length),
+				)),
+				// One read for the round info, blocknumber is read free
+				T::DbWeight::get().reads(1),
+			)
+		}
+
+		fn estimate_next_session_rotation(
+			_now: T::BlockNumber,
+		) -> (Option<T::BlockNumber>, Weight) {
+			let round = <Round<T>>::get();
+
+			(
+				Some(round.first + round.length.into()),
+				// One read for the round info, blocknumber is read free
+				T::DbWeight::get().reads(1),
+			)
 		}
 	}
 }
