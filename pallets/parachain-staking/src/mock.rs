@@ -140,7 +140,17 @@ impl Config for Test {
 	type MinDelegation = MinDelegation;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
+	type CollatorRegistration = ValidatorRegistrationMock<Self>;
 	type WeightInfo = ();
+}
+
+pub struct ValidatorRegistrationMock<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> frame_support::traits::ValidatorRegistration<T::AccountId>
+	for ValidatorRegistrationMock<T>
+{
+	fn is_registered(_id: &T::AccountId) -> bool {
+		true
+	}
 }
 
 pub(crate) struct ExtBuilder {
