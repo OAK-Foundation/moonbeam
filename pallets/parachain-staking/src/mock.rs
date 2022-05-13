@@ -144,12 +144,14 @@ impl Config for Test {
 	type WeightInfo = ();
 }
 
+pub const UNREGISTERED_ACCOUNT: AccountId = 99999;
 pub struct ValidatorRegistrationMock<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> frame_support::traits::ValidatorRegistration<T::AccountId>
 	for ValidatorRegistrationMock<T>
 {
-	fn is_registered(_id: &T::AccountId) -> bool {
-		true
+	fn is_registered(id: &T::AccountId) -> bool {
+		let acc: AccountId = id.to_string().parse().unwrap();
+		acc != UNREGISTERED_ACCOUNT
 	}
 }
 
