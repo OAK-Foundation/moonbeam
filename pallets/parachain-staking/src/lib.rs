@@ -172,6 +172,8 @@ pub mod pallet {
 		type OnNewRound: OnNewRound;
 		/// Whether a given collator has completed required registration to be selected as block author
 		type CollatorRegistration: ValidatorRegistration<Self::AccountId>;
+		/// Any unvested funds that should be used for inflation calcs
+		type Vesting: UnvestedIssuance<BalanceOf<Self>>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
