@@ -43,11 +43,11 @@ impl OnNewRound for () {
 }
 
 use sp_runtime::traits::Zero;
-pub trait UnvestedIssuance<Balance> {
-	fn total_unvested_issuance() -> Balance;
+pub trait AdditionalIssuance<Balance> {
+	fn additional_issuance() -> Balance;
 }
-impl<Balance: Zero> UnvestedIssuance<Balance> for () {
-	fn total_unvested_issuance() -> Balance {
+impl<Balance: Zero> AdditionalIssuance<Balance> for () {
+	fn additional_issuance() -> Balance {
 		Zero::zero()
 	}
 }
