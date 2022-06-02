@@ -8707,14 +8707,36 @@ fn test_delegator_scheduled_for_bond_decrease_is_rewarded_when_request_cancelled
 }
 
 #[test]
+fn note_author_updates_points() {
+	use crate::{AwardedPts, Points};
+	use pallet_authorship::EventHandler;
+
+	ExtBuilder::default()
+		.with_balances(vec![(1, 30), (2, 30)])
+		.with_candidates(vec![(1, 30), (2, 30)])
+		.build()
+		.execute_with(|| {
+			roll_to_round_begin(1);
+			ParachainStaking::note_author(1);
+			ParachainStaking::note_author(1);
+			ParachainStaking::note_author(2);
+			let col1_points = <AwardedPts<Test>>::get(1, 1);
+			let col2_points = <AwardedPts<Test>>::get(1, 2);
+			let total_points = <Points<Test>>::get(1);
+			assert_eq!(40, col1_points);
+			assert_eq!(20, col2_points);
+			assert_eq!(60, total_points);
+		});
+}
+
+#[test]
 fn new_session_returns_selected_collators() {
 	ExtBuilder::default()
 		.with_balances(vec![(1, 30), (2, 30), (3, 30)])
 		.with_candidates(vec![(1, 30), (2, 30), (3, 30)])
 		.build()
 		.execute_with(|| {
-			roll_to_round_begin(1);
-			assert_eq!(ParachainStaking::new_session(1), Some(vec![1, 2, 3]));
+			assert_eq!(Some(vec![1, 2, 3]), ParachainStaking::new_session(1));
 		});
 }
 
@@ -8726,6 +8748,6 @@ fn new_session_returns_none_if_no_selected_collators() {
 		.build()
 		.execute_with(|| {
 			roll_to_round_begin(2);
-			assert_eq!(ParachainStaking::new_session(1), None);
+			assert_eq!(None, ParachainStaking::new_session(1));
 		});
 }
