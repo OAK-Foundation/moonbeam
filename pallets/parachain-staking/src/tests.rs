@@ -34,6 +34,7 @@ use crate::{
 	DelegatorState, DelegatorStatus, Error, Event, Range, TopDelegations, Total,
 };
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
+use pallet_session::SessionManager;
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 
 // ~~ ROOT ~~
@@ -8702,5 +8703,29 @@ fn test_delegator_scheduled_for_bond_decrease_is_rewarded_when_request_cancelled
 				],
 				"delegator was not rewarded as intended",
 			);
+		});
+}
+
+#[test]
+fn new_session_returns_selected_collators() {
+	ExtBuilder::default()
+		.with_balances(vec![(1, 30), (2, 30), (3, 30)])
+		.with_candidates(vec![(1, 30), (2, 30), (3, 30)])
+		.build()
+		.execute_with(|| {
+			roll_to_round_begin(1);
+			assert_eq!(ParachainStaking::new_session(1), Some(vec![1, 2, 3]));
+		});
+}
+
+#[test]
+fn new_session_returns_none_if_no_selected_collators() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.with_candidates(vec![])
+		.build()
+		.execute_with(|| {
+			roll_to_round_begin(2);
+			assert_eq!(ParachainStaking::new_session(1), None);
 		});
 }
