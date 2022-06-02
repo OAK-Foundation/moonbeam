@@ -34,7 +34,7 @@ use crate::{
 	DelegatorState, DelegatorStatus, Error, Event, Range, TopDelegations, Total,
 };
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
-use pallet_session::SessionManager;
+use pallet_session::{SessionManager, ShouldEndSession};
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 
 // ~~ ROOT ~~
@@ -8749,5 +8749,19 @@ fn new_session_returns_none_if_no_selected_collators() {
 		.execute_with(|| {
 			roll_to_round_begin(2);
 			assert_eq!(None, ParachainStaking::new_session(1));
+		});
+}
+
+#[test]
+fn should_end_session_ties_sessions_to_rounds() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.with_candidates(vec![])
+		.build()
+		.execute_with(|| {
+			let mut block = 1;
+			assert!(!ParachainStaking::should_end_session(block));
+			block = crate::mock::DefaultBlocksPerRound::get() as u64;
+			assert!(ParachainStaking::should_end_session(block));
 		});
 }
