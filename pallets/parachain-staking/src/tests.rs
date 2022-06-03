@@ -22,6 +22,7 @@
 //! 3. Public (Collator, Nominator)
 //! 4. Miscellaneous Property-Based Tests
 use crate::delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest};
+use crate::mock::DefaultBlocksPerRound;
 use crate::mock::{
 	roll_one_block, roll_to, roll_to_round_begin, roll_to_round_end, set_author, Balances,
 	Event as MetaEvent, ExtBuilder, Origin, ParachainStaking, Test,
@@ -33,6 +34,7 @@ use crate::{
 	CollatorCandidate, CollatorStatus, Config, Delegations, Delegator, DelegatorAdded,
 	DelegatorState, DelegatorStatus, Error, Event, Range, TopDelegations, Total,
 };
+use frame_support::traits::EstimateNextSessionRotation;
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 use pallet_session::{SessionManager, ShouldEndSession};
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
@@ -8706,6 +8708,8 @@ fn test_delegator_scheduled_for_bond_decrease_is_rewarded_when_request_cancelled
 		});
 }
 
+// EventHandler
+
 #[test]
 fn note_author_updates_points() {
 	use crate::{AwardedPts, Points};
@@ -8728,6 +8732,8 @@ fn note_author_updates_points() {
 			assert_eq!(60, total_points);
 		});
 }
+
+// SessionManager
 
 #[test]
 fn new_session_returns_selected_collators() {
@@ -8752,6 +8758,8 @@ fn new_session_returns_none_if_no_selected_collators() {
 		});
 }
 
+// ShouldEndSession
+
 #[test]
 fn should_end_session_ties_sessions_to_rounds() {
 	ExtBuilder::default()
@@ -8761,7 +8769,58 @@ fn should_end_session_ties_sessions_to_rounds() {
 		.execute_with(|| {
 			let mut block = 1;
 			assert!(!ParachainStaking::should_end_session(block));
-			block = crate::mock::DefaultBlocksPerRound::get() as u64;
+			block = DefaultBlocksPerRound::get() as u64;
 			assert!(ParachainStaking::should_end_session(block));
+		});
+}
+
+// EstimateNextSessionRotation
+
+#[test]
+fn average_session_length_is_round_length() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.with_candidates(vec![])
+		.build()
+		.execute_with(|| {
+			let round_length = DefaultBlocksPerRound::get() as u64;
+			assert_eq!(round_length, ParachainStaking::average_session_length());
+		});
+}
+
+#[test]
+fn estimates_current_session_progress() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.with_candidates(vec![])
+		.build()
+		.execute_with(|| {
+			let round_length = DefaultBlocksPerRound::get() as u64;
+			let block = 2;
+			roll_to(2);
+			assert_eq!(
+				sp_runtime::Permill::from_rational(block, round_length),
+				ParachainStaking::estimate_current_session_progress(block)
+					.0
+					.unwrap()
+			);
+		});
+}
+
+#[test]
+fn estimates_next_session_rotation() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.with_candidates(vec![])
+		.build()
+		.execute_with(|| {
+			roll_to_round_begin(1);
+			let round_length = DefaultBlocksPerRound::get() as u64;
+			assert_eq!(
+				round_length,
+				ParachainStaking::estimate_next_session_rotation(1)
+					.0
+					.unwrap()
+			);
 		});
 }
