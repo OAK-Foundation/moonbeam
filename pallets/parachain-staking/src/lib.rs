@@ -1778,7 +1778,7 @@ pub mod pallet {
 			candidate: &T::AccountId,
 			more: BalanceOf<T>,
 		) -> DispatchResult {
-			let mut state = <DelegatorState<T>>::get(&delegator).ok_or(Error::<T>::DelegatorDNE)?;
+			let mut state = <DelegatorState<T>>::get(delegator).ok_or(Error::<T>::DelegatorDNE)?;
 			state.increase_delegation::<T>(candidate.clone(), more)?;
 			Ok(())
 		}
