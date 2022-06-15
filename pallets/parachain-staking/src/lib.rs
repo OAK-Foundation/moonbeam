@@ -1310,8 +1310,7 @@ pub mod pallet {
 			more: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			let mut state = <DelegatorState<T>>::get(&delegator).ok_or(Error::<T>::DelegatorDNE)?;
-			state.increase_delegation::<T>(candidate.clone(), more)?;
+			<Self as DelegatorActions<T>>::delegator_bond_more(&delegator, &candidate, more)?;
 			Ok(().into())
 		}
 
@@ -1762,6 +1761,26 @@ pub mod pallet {
 				// One read for the round info, blocknumber is read free
 				T::DbWeight::get().reads(1),
 			)
+		}
+	}
+
+	pub trait DelegatorActions<T: Config> {
+		fn delegator_bond_more(
+			delegator: &T::AccountId,
+			candidate: &T::AccountId,
+			more: BalanceOf<T>,
+		) -> DispatchResult;
+	}
+
+	impl<T: Config> DelegatorActions<T> for Pallet<T> {
+		fn delegator_bond_more(
+			delegator: &T::AccountId,
+			candidate: &T::AccountId,
+			more: BalanceOf<T>,
+		) -> DispatchResult {
+			let mut state = <DelegatorState<T>>::get(&delegator).ok_or(Error::<T>::DelegatorDNE)?;
+			state.increase_delegation::<T>(candidate.clone(), more)?;
+			Ok(())
 		}
 	}
 }
