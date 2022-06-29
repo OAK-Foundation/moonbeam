@@ -1310,7 +1310,9 @@ pub mod pallet {
 			more: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			<Self as DelegatorActions<T>>::delegator_bond_more(&delegator, &candidate, more)?;
+			<Self as DelegatorActions<T::AccountId, BalanceOf<T>>>::delegator_bond_more(
+				&delegator, &candidate, more,
+			)?;
 			Ok(().into())
 		}
 
@@ -1764,15 +1766,15 @@ pub mod pallet {
 		}
 	}
 
-	pub trait DelegatorActions<T: Config> {
+	pub trait DelegatorActions<AccountId, Balance> {
 		fn delegator_bond_more(
-			delegator: &T::AccountId,
-			candidate: &T::AccountId,
-			more: BalanceOf<T>,
+			delegator: &AccountId,
+			candidate: &AccountId,
+			more: Balance,
 		) -> DispatchResult;
 	}
 
-	impl<T: Config> DelegatorActions<T> for Pallet<T> {
+	impl<T: Config> DelegatorActions<T::AccountId, BalanceOf<T>> for Pallet<T> {
 		fn delegator_bond_more(
 			delegator: &T::AccountId,
 			candidate: &T::AccountId,
