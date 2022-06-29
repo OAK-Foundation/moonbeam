@@ -1688,6 +1688,18 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> DelegatorActions<T::AccountId, BalanceOf<T>> for Pallet<T> {
+		fn delegator_bond_more(
+			delegator: &T::AccountId,
+			candidate: &T::AccountId,
+			more: BalanceOf<T>,
+		) -> DispatchResult {
+			let mut state = <DelegatorState<T>>::get(delegator).ok_or(Error::<T>::DelegatorDNE)?;
+			state.increase_delegation::<T>(candidate.clone(), more)?;
+			Ok(())
+		}
+	}
+
 	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Pallet<T> {
 		// Add reward points to block authors:
 		// * 20 points to the block producer for producing a block in the chain
@@ -1763,26 +1775,6 @@ pub mod pallet {
 				// One read for the round info, blocknumber is read free
 				T::DbWeight::get().reads(1),
 			)
-		}
-	}
-
-	pub trait DelegatorActions<AccountId, Balance> {
-		fn delegator_bond_more(
-			delegator: &AccountId,
-			candidate: &AccountId,
-			more: Balance,
-		) -> DispatchResult;
-	}
-
-	impl<T: Config> DelegatorActions<T::AccountId, BalanceOf<T>> for Pallet<T> {
-		fn delegator_bond_more(
-			delegator: &T::AccountId,
-			candidate: &T::AccountId,
-			more: BalanceOf<T>,
-		) -> DispatchResult {
-			let mut state = <DelegatorState<T>>::get(delegator).ok_or(Error::<T>::DelegatorDNE)?;
-			state.increase_delegation::<T>(candidate.clone(), more)?;
-			Ok(())
 		}
 	}
 }
