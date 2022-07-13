@@ -1698,6 +1698,24 @@ pub mod pallet {
 			state.increase_delegation::<T>(candidate.clone(), more)?;
 			Ok(())
 		}
+
+		fn testing_prepare_delegator(
+			collator: &T::AccountId,
+			delegator: &T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			Pallet::<T>::join_candidates(
+				T::Origin::from(Some(collator.clone()).into()),
+				T::MinCandidateStk::get(),
+				<CandidatePool<T>>::get().0.len() as u32,
+			)?;
+			Pallet::<T>::delegate(
+				T::Origin::from(Some(delegator.clone()).into()),
+				collator.clone(),
+				T::MinDelegatorStk::get(),
+				0,
+				0,
+			)
+		}
 	}
 
 	impl<T: Config> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Pallet<T> {
