@@ -1699,8 +1699,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[cfg(test)]
-		fn setup_delegator(
+		fn testing_setup_delegator(
 			collator: &T::AccountId,
 			delegator: &T::AccountId,
 		) -> DispatchResultWithPostInfo {

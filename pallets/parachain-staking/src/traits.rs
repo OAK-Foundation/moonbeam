@@ -42,17 +42,17 @@ impl OnNewRound for () {
 	}
 }
 
-use frame_support::pallet_prelude::DispatchResult;
-#[cfg(test)]
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+use frame_support::pallet_prelude::{DispatchResult, DispatchResultWithPostInfo};
 pub trait DelegatorActions<AccountId, Balance> {
 	fn delegator_bond_more(
 		delegator: &AccountId,
 		candidate: &AccountId,
 		more: Balance,
 	) -> DispatchResult;
-	#[cfg(test)]
-	fn setup_delegator(collator: &AccountId, delegator: &AccountId) -> DispatchResultWithPostInfo;
+	fn testing_setup_delegator(
+		collator: &AccountId,
+		delegator: &AccountId,
+	) -> DispatchResultWithPostInfo;
 }
 
 use sp_runtime::traits::Zero;
