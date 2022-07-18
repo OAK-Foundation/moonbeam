@@ -1694,7 +1694,8 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		fn testing_setup_delegator(
+		#[cfg(feature = "runtime-benchmarks")]
+		fn setup_delegator(
 			collator: &T::AccountId,
 			delegator: &T::AccountId,
 		) -> DispatchResultWithPostInfo {

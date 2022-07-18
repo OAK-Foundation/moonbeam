@@ -49,10 +49,8 @@ pub trait DelegatorActions<AccountId, Balance> {
 		candidate: &AccountId,
 		more: Balance,
 	) -> DispatchResultWithPostInfo;
-	fn testing_setup_delegator(
-		collator: &AccountId,
-		delegator: &AccountId,
-	) -> DispatchResultWithPostInfo;
+	#[cfg(feature = "runtime-benchmarks")]
+	fn setup_delegator(collator: &AccountId, delegator: &AccountId) -> DispatchResultWithPostInfo;
 }
 
 use sp_runtime::traits::Zero;
