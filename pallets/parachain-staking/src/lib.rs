@@ -1684,14 +1684,14 @@ pub mod pallet {
 			delegator: &T::AccountId,
 			candidate: &T::AccountId,
 			more: BalanceOf<T>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			ensure!(
 				!Self::delegation_request_revoke_exists(candidate, delegator),
 				Error::<T>::PendingDelegationRevoke
 			);
 			let mut state = <DelegatorState<T>>::get(delegator).ok_or(Error::<T>::DelegatorDNE)?;
 			state.increase_delegation::<T>(candidate.clone(), more)?;
-			Ok(())
+			Ok(().into())
 		}
 
 		fn testing_setup_delegator(
