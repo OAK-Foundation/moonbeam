@@ -87,7 +87,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use parity_scale_codec::Decode;
 	use sp_runtime::{
-		traits::{Saturating, Zero},
+		traits::{CheckedSub, Saturating, Zero},
 		Perbill, Percent, Permill,
 	};
 	use sp_std::{collections::btree_map::BTreeMap, prelude::*};
@@ -1830,6 +1830,21 @@ pub mod pallet {
 			let mut state = <DelegatorState<T>>::get(delegator).ok_or(Error::<T>::DelegatorDNE)?;
 			state.increase_delegation::<T>(candidate.clone(), more)?;
 			Ok(().into())
+		}
+
+		fn delegator_bond_till_minimum(
+			delegator: &T::AccountId,
+			candidate: &T::AccountId,
+			minimum: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			Self::get_delegator_stakable_free_balance(delegator)
+				.checked_sub(&minimum)
+				.ok_or(Error::<T>::InsufficientBalance.into())
+				.and_then(|delegation| {
+					<Self as DelegatorActions<T::AccountId, BalanceOf<T>>>::delegator_bond_more(
+						delegator, candidate, delegation,
+					)
+				})
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]

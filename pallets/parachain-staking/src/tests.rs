@@ -9572,6 +9572,65 @@ mod jit_migrate_reserve_to_locks_tests {
 	//     * other tests around lquidity checks (can't bond_more if not enough unlocked amount, etc)
 	//     * request cancellation
 }
+
+mod delegator_actions {
+	use super::*;
+	use crate::traits::DelegatorActions;
+
+	#[test]
+	fn delegate_till_min_fails_without_minimum_funds() {
+		ExtBuilder::default()
+			.with_balances(vec![(1, 30), (2, 15)])
+			.with_candidates(vec![(1, 30)])
+			.with_delegations(vec![(2, 1, 10)])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					ParachainStaking::delegator_state(2)
+						.expect("exists")
+						.total(),
+					10
+				);
+				assert_noop!(
+					ParachainStaking::delegator_bond_till_minimum(&2, &1, 6),
+					Error::<Test>::InsufficientBalance
+				);
+				assert_eq!(
+					ParachainStaking::delegator_state(2)
+						.expect("exists")
+						.total(),
+					10
+				);
+				assert_eq!(ParachainStaking::get_delegator_stakable_free_balance(&2), 5);
+			});
+	}
+
+	#[test]
+	fn delegate_till_min_succeeds_with_funds() {
+		ExtBuilder::default()
+			.with_balances(vec![(1, 30), (2, 15)])
+			.with_candidates(vec![(1, 30)])
+			.with_delegations(vec![(2, 1, 10)])
+			.build()
+			.execute_with(|| {
+				assert_eq!(
+					ParachainStaking::delegator_state(2)
+						.expect("exists")
+						.total(),
+					10
+				);
+				assert_ok!(ParachainStaking::delegator_bond_till_minimum(&2, &1, 1),);
+				assert_eq!(
+					ParachainStaking::delegator_state(2)
+						.expect("exists")
+						.total(),
+					14
+				);
+				assert_eq!(ParachainStaking::get_delegator_stakable_free_balance(&2), 1);
+			});
+	}
+}
+
 #[allow(deprecated)]
 #[test]
 fn test_delegator_with_deprecated_status_leaving_can_schedule_leave_delegators_as_fix() {
