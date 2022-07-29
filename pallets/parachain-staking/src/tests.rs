@@ -9619,7 +9619,7 @@ mod delegator_actions {
 						.total(),
 					10
 				);
-				assert_ok!(ParachainStaking::delegator_bond_till_minimum(&2, &1, 1),);
+				assert_ok!(ParachainStaking::delegator_bond_till_minimum(&2, &1, 1), 4);
 				assert_eq!(
 					ParachainStaking::delegator_state(2)
 						.expect("exists")

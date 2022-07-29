@@ -79,6 +79,7 @@ pub mod pallet {
 		CancelledScheduledRequest, DelegationAction, ScheduledRequest,
 	};
 	use crate::{set::OrderedSet, traits::*, types::*, InflationInfo, Range, WeightInfo};
+	use frame_support::dispatch::DispatchErrorWithPostInfo;
 	use frame_support::pallet_prelude::*;
 	use frame_support::traits::{
 		tokens::WithdrawReasons, Currency, Get, Imbalance, LockIdentifier, LockableCurrency,
@@ -1836,14 +1837,15 @@ pub mod pallet {
 			delegator: &T::AccountId,
 			candidate: &T::AccountId,
 			minimum: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
 			Self::get_delegator_stakable_free_balance(delegator)
 				.checked_sub(&minimum)
 				.ok_or(Error::<T>::InsufficientBalance.into())
 				.and_then(|delegation| {
 					<Self as DelegatorActions<T::AccountId, BalanceOf<T>>>::delegator_bond_more(
 						delegator, candidate, delegation,
-					)
+					)?;
+					Ok(delegation)
 				})
 		}
 
