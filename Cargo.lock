@@ -7106,7 +7106,7 @@ dependencies = [
 [[package]]
 name = "pallet-conviction-voting"
 version = "4.0.0-dev"
-source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#047da514445b644ccd50f7ab8bc11b7f388025a3"
+source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#1ee2ff10aa1b426d70d7a20ab9caa3cca8e95ab3"
 dependencies = [
  "assert_matches",
  "frame-benchmarking",
@@ -8205,7 +8205,7 @@ dependencies = [
 [[package]]
 name = "pallet-referenda"
 version = "4.0.0-dev"
-source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#047da514445b644ccd50f7ab8bc11b7f388025a3"
+source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#1ee2ff10aa1b426d70d7a20ab9caa3cca8e95ab3"
 dependencies = [
  "assert_matches",
  "frame-benchmarking",
@@ -8629,7 +8629,7 @@ dependencies = [
 [[package]]
 name = "pallet-whitelist"
 version = "4.0.0-dev"
-source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#047da514445b644ccd50f7ab8bc11b7f388025a3"
+source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29#1ee2ff10aa1b426d70d7a20ab9caa3cca8e95ab3"
 dependencies = [
  "frame-support",
  "frame-system",
