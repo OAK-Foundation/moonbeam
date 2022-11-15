@@ -1488,13 +1488,6 @@ mod tests {
 	}
 
 	#[test]
-	fn bench_round_transition_on_initialize() {
-		new_test_ext().execute_with(|| {
-			assert_ok!(Pallet::<Test>::test_benchmark_round_transition_on_initialize());
-		});
-	}
-
-	#[test]
 	fn bench_base_on_initialize() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(Pallet::<Test>::test_benchmark_base_on_initialize());
