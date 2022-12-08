@@ -10289,6 +10289,7 @@ name = "precompile-utils"
 version = "0.1.0"
 dependencies = [
  "affix",
+ "derive_more",
  "evm",
  "fp-evm",
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
@@ -10302,6 +10303,8 @@ dependencies = [
  "parity-scale-codec",
  "paste",
  "precompile-utils-macro",
+ "scale-info",
+ "serde",
  "sha3",
  "similar-asserts",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
