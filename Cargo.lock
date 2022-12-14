@@ -7592,7 +7592,6 @@ dependencies = [
  "parity-scale-codec",
  "precompile-utils",
  "scale-info",
- "serde",
  "session-keys-primitives",
  "sp-core 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "sp-io 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
