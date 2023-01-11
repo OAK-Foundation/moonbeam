@@ -5269,6 +5269,7 @@ dependencies = [
  "moonbeam-runtime-common",
  "moonbeam-xcm-benchmarks",
  "nimbus-primitives",
+ "num_enum",
  "orml-traits",
  "orml-xcm-support",
  "orml-xtokens",
@@ -7549,6 +7550,7 @@ name = "pallet-evm-precompile-proxy"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "evm",
  "fp-evm",
  "frame-support 4.0.0-dev (git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29)",
  "frame-system 4.0.0-dev (git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.29)",

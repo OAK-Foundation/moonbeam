@@ -20,6 +20,8 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 
+pallet-evm-precompile-proxy = { path = "../../precompiles/proxy", default-features = false }
+
 [features]
 default = [ "std" ]
 std = [
