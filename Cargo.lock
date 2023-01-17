@@ -5505,10 +5505,12 @@ dependencies = [
  "pallet-utility 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "parity-scale-codec",
  "polkadot-runtime",
+ "polkadot-runtime-parachains",
  "rococo-runtime",
  "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "westend-runtime",
+ "xcm",
  "xcm-primitives",
 ]
 
@@ -17137,11 +17139,13 @@ dependencies = [
 name = "xcm-primitives"
 version = "0.1.0"
 dependencies = [
+ "cumulus-primitives-core",
  "ethereum",
  "ethereum-types",
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "hex",
+ "impl-trait-for-tuples",
  "log",
  "orml-traits",
  "parity-scale-codec",
