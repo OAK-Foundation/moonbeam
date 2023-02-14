@@ -52,7 +52,7 @@ moonriver-native = [ "service/moonriver-native" ]
 runtime-benchmarks = [ "polkadot-service/runtime-benchmarks", "service/runtime-benchmarks" ]
 try-runtime = [
 	"service/try-runtime",
-	"try-runtime-cli",
+	"try-runtime-cli/try-runtime",
 ]
 
 moonbase-runtime-benchmarks = [ "service/moonbase-runtime-benchmarks" ]
