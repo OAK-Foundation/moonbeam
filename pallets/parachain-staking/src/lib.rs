@@ -854,7 +854,7 @@ pub mod pallet {
 			let old = <TotalSelected<T>>::get();
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
 			ensure!(
-				new <= <Round<T>>::get().length,
+				new < <Round<T>>::get().length,
 				Error::<T>::RoundLengthMustBeGreaterThanTotalSelectedCollators,
 			);
 			<TotalSelected<T>>::put(new);
@@ -893,7 +893,7 @@ pub mod pallet {
 			let (now, first, old) = (round.current, round.first, round.length);
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
 			ensure!(
-				new >= <TotalSelected<T>>::get(),
+				new > <TotalSelected<T>>::get(),
 				Error::<T>::RoundLengthMustBeGreaterThanTotalSelectedCollators,
 			);
 			round.length = new;
