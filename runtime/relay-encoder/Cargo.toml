@@ -1,17 +1,17 @@
 [package]
 name = "moonbeam-relay-encoder"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2021"
 homepage = "https://moonbeam.network"
 license = "GPL-3.0-only"
-repository = "https://github.com/PureStake/moonbeam/"
+repository = { workspace = true }
 version = "0.1.0"
 
 [dependencies]
 
 # Moonbeam
-pallet-evm-precompile-relay-encoder = { path = "../../precompiles/relay-encoder/", default-features = false }
-xcm-primitives = { path = "../../primitives/xcm", default-features = false }
+pallet-evm-precompile-relay-encoder = { workspace = true }
+xcm-primitives = { workspace = true }
 
 # Substrate
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
@@ -21,21 +21,21 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Cumulus
-cumulus-primitives-core = { git = "https://github.com/purestake/cumulus", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+cumulus-primitives-core = { workspace = true }
 
 # Polkadot
-xcm = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+xcm = { workspace = true }
 
 [dev-dependencies]
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 
-kusama-runtime = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-polkadot-runtime = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-polkadot-runtime-parachains = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-rococo-runtime = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-westend-runtime = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
+kusama-runtime = { workspace = true }
+polkadot-runtime = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
+rococo-runtime = { workspace = true }
+westend-runtime = { workspace = true }
 
 [features]
 default = [ "std" ]

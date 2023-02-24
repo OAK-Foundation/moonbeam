@@ -1,18 +1,18 @@
 [package]
 name = "pallet-evm-precompile-xtokens"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 description = "A Precompile to make xtokens accessible to pallet-evm"
 edition = "2021"
 version = "0.1.0"
 
 [dependencies]
-log = "0.4"
-num_enum = { version = "0.5.3", default-features = false }
-rustc-hex = { version = "2.0.1", default-features = false }
+log = { workspace = true }
+num_enum = { workspace = true }
+rustc-hex = { workspace = true }
 
 # Moonbeam
-precompile-utils = { path = "../utils", default-features = false }
-xcm-primitives = { path = "../../primitives/xcm", default-features = false }
+precompile-utils = { workspace = true }
+xcm-primitives = { workspace = true }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
@@ -26,16 +26,16 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 pallet-evm = { git = "https://github.com/purestake/frontier", branch = "moonbeam-polkadot-v0.9.29", default-features = false }
 
 # Polkadot / XCM
-orml-xtokens = { git = "https://github.com/purestake/open-runtime-module-library", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
-xcm = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+orml-xtokens = { workspace = true }
+xcm = { workspace = true }
 
 [dev-dependencies]
-derive_more = "0.99"
-serde = "1.0.100"
-sha3 = "0.10"
+derive_more = { workspace = true }
+serde = { workspace = true }
+sha3 = { workspace = true }
 
 # Moonbeam
-precompile-utils = { path = "../utils", features = [ "testing" ] }
+precompile-utils = { workspace = true, features = [ "testing" ] }
 
 # Substrate
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [ "max-encoded-len" ] }
@@ -45,13 +45,13 @@ scale-info = { version = "2.0", features = [ "derive" ] }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 
 # Cumulus
-cumulus-primitives-core = { git = "https://github.com/purestake/cumulus", branch = "moonbeam-polkadot-v0.9.37" }
+cumulus-primitives-core = { workspace = true }
 
 # Polkadot
-orml-traits = { git = "https://github.com/purestake/open-runtime-module-library", branch = "moonbeam-polkadot-v0.9.37" }
-pallet-xcm = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-xcm-builder = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
-xcm-executor = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
+orml-traits = { workspace = true }
+pallet-xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
 
 [features]
 default = [ "std" ]

@@ -1,6 +1,6 @@
 [package]
 name = "pallet-maintenance-mode"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 description = "Puts a FRAME-based runtime into maintenance mode where restricted interactions are allowed."
 edition = "2021"
 version = "0.1.0"
@@ -8,10 +8,10 @@ version = "0.1.0"
 [dependencies]
 
 # Local
-xcm-primitives = { path = "../../primitives/xcm", optional = true, default-features = false }
+xcm-primitives = { workspace = true, optional = true }
 
 # Crates.io
-log = "0.4"
+log = { workspace = true }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
@@ -22,7 +22,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Cumulus
-cumulus-primitives-core = { git = "https://github.com/purestake/cumulus", branch = "moonbeam-polkadot-v0.9.37", optional = true, default-features = false }
+cumulus-primitives-core = { workspace = true, optional = true }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }

@@ -1,10 +1,10 @@
 [package]
 name = "moonbeam-vrf"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2018"
 homepage = "https://moonbeam.network"
 license = "GPL-3.0-only"
-repository = "https://github.com/PureStake/moonbeam/"
+repository = { workspace = true }
 version = "0.1.0"
 
 [dependencies]
@@ -18,10 +18,10 @@ sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polka
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Moonbeam
-session-keys-primitives = { path = "../../primitives/session-keys" }
+session-keys-primitives = { workspace = true, features = [ "std" ] }
 
 # Nimbus
-nimbus-primitives = { git = "https://github.com/purestake/nimbus", branch = "moonbeam-polkadot-v0.9.37" }
+nimbus-primitives = { workspace = true, features = [ "std" ] }
 
 # Polkadot
-polkadot-primitives = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37" }
+polkadot-primitives = { workspace = true }

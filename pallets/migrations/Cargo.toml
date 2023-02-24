@@ -1,6 +1,6 @@
 [package]
 name = "pallet-migrations"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 description = "migrations management pallet"
 edition = "2021"
 version = "0.1.0"
@@ -8,11 +8,11 @@ version = "0.1.0"
 [dependencies]
 
 # Local
-xcm-primitives = { path = "../../primitives/xcm", default-features = false }
+xcm-primitives = { workspace = true }
 
 # Crates.io
-impl-trait-for-tuples = "0.2.1"
-log = "0.4"
+impl-trait-for-tuples = { workspace = true }
+log = { workspace = true }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }

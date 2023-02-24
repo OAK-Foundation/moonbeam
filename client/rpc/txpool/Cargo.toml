@@ -1,21 +1,21 @@
 [package]
 name = "moonbeam-rpc-txpool"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2021"
 homepage = "https://moonbeam.network"
 license = "GPL-3.0-only"
-repository = "https://github.com/PureStake/moonbeam/"
+repository = { workspace = true }
 version = "0.6.0"
 
 [dependencies]
-jsonrpsee = { version = "0.16.2", default-features = false, features = [ "macros", "server" ] }
-rlp = "0.5"
-serde = { version = "1.0", features = [ "derive" ] }
-sha3 = "0.10"
+jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+rlp = { workspace = true }
+serde = { workspace = true, features = [ "derive" ] }
+sha3 = { workspace = true }
 
 # Moonbeam
-moonbeam-rpc-core-txpool = { path = "../../rpc-core/txpool" }
-moonbeam-rpc-primitives-txpool = { path = "../../../primitives/rpc/txpool" }
+moonbeam-rpc-core-txpool = { workspace = true }
+moonbeam-rpc-primitives-txpool = { workspace = true, features = [ "std" ] }
 
 # Substrate
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
@@ -28,5 +28,5 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 
 # Frontier
-ethereum-types = "0.14"
-fc-rpc = { git = "https://github.com/purestake/frontier", branch = "moonbeam-polkadot-v0.9.37", features = [ "rpc-binary-search-estimate" ] }
+ethereum-types = { workspace = true, features = [ "std" ] }
+fc-rpc = { workspace = true }

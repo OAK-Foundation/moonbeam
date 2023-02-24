@@ -1,15 +1,15 @@
 [package]
 name = "pallet-asset-manager"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2021"
 version = "0.1.0"
 
 [dependencies]
-log = { version = "0.4", default-features = false }
-serde = { version = "1.0.124", optional = true }
+log = { workspace = true }
+serde = { workspace = true, optional = true }
 
 # Moonbeam
-xcm-primitives = { path = "../../primitives/xcm", default-features = false }
+xcm-primitives = { workspace = true }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
@@ -21,7 +21,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Polkadot
-xcm = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+xcm = { workspace = true }
 
 # Benchmarks
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", optional = true, default-features = false }

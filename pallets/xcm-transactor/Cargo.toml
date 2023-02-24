@@ -1,6 +1,6 @@
 [package]
 name = "pallet-xcm-transactor"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2021"
 version = "0.2.0"
 
@@ -9,7 +9,7 @@ log = { version = "0.4", default-features = false }
 serde = { version = "1.0.124", optional = true }
 
 # Moonbeam
-xcm-primitives = { path = "../../primitives/xcm", default-features = false }
+xcm-primitives = { workspace = true }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
@@ -21,13 +21,13 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Cumulus
-cumulus-primitives-core = { git = "https://github.com/purestake/cumulus", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+cumulus-primitives-core = { workspace = true }
 
 # Polkadot / XCM
-orml-traits = { git = "https://github.com/purestake/open-runtime-module-library", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
-xcm = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
-xcm-builder = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
-xcm-executor = { git = "https://github.com/purestake/polkadot", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+orml-traits = { workspace = true }
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
 
 # Benchmarks
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", optional = true, default-features = false }

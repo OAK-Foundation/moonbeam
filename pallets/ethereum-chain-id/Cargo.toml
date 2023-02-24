@@ -1,11 +1,11 @@
 [package]
 name = "pallet-ethereum-chain-id"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 edition = "2021"
 version = "1.0.0"
 
 [dependencies]
-serde = { version = "1.0.101", optional = true, features = [ "derive" ] }
+serde = { workspace = true, optional = true, features = [ "derive" ] }
 
 # Substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }

@@ -1,6 +1,6 @@
 [package]
 name = "pallet-randomness"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 description = "Provides randomness"
 edition = "2018"
 version = "0.1.0"
@@ -23,7 +23,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Frontier
-pallet-evm = { git = "https://github.com/purestake/frontier", branch = "moonbeam-polkadot-v0.9.37", default-features = false, features = [ "forbid-evm-reentrancy" ] }
+pallet-evm = { workspace = true, features = [ "forbid-evm-reentrancy" ] }
 
 [dev-dependencies]
 derive_more = "0.99"

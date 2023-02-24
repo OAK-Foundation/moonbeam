@@ -1,13 +1,13 @@
 [package]
 name = "pallet-author-mapping"
-authors = [ "PureStake" ]
+authors = { workspace = true }
 description = "Maps AuthorIds to AccountIds Useful for associating consensus authors with in-runtime accounts"
 edition = "2021"
 version = "2.0.5"
 
 [dependencies]
-log = { version = "0.4", default-features = false }
-serde = { version = "1.0.124", optional = true }
+log = { workspace = true }
+serde = { workspace = true, optional = true }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", optional = true, default-features = false }
@@ -19,9 +19,9 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # Nimbus
-nimbus-primitives = { git = "https://github.com/purestake/nimbus", branch = "moonbeam-polkadot-v0.9.37", default-features = false }
+nimbus-primitives = { workspace = true }
 
-session-keys-primitives = { path = "../../primitives/session-keys", default-features = false }
+session-keys-primitives = { workspace = true }
 
 [dev-dependencies]
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
