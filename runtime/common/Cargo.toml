@@ -61,6 +61,7 @@ std = [
 	"pallet-migrations/std",
 	"pallet-parachain-staking/std",
 	"pallet-randomness/std",
+	"pallet-referenda/std",
 	"pallet-scheduler/std",
 	"pallet-xcm-transactor/std",
 	"precompile-utils/std",
@@ -70,6 +71,7 @@ std = [
 	"xcm-executor/std",
 	"xcm/std",
 ]
+runtime-benchmarks = [ "pallet-referenda/runtime-benchmarks" ]
 try-runtime = [
 	"frame-support/try-runtime",
 	"pallet-migrations/try-runtime",
