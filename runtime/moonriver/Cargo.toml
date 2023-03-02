@@ -225,7 +225,6 @@ std = [
 	"pallet-preimage/std",
 	"pallet-proxy-genesis-companion/std",
 	"pallet-proxy/std",
-	"pallet-randomness-collective-flip/std",
 	"pallet-randomness/std",
 	"pallet-referenda/std",
 	"pallet-root-testing/std",
