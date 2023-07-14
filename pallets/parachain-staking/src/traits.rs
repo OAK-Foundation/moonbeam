@@ -16,7 +16,7 @@
 
 //! traits for parachain-staking
 
-use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
+use frame_support::pallet_prelude::Weight;
 
 pub trait OnCollatorPayout<AccountId, Balance> {
 	fn on_collator_payout(
@@ -65,16 +65,16 @@ impl<Runtime: crate::Config> PayoutCollatorReward<Runtime> for () {
 	}
 }
 
-use frame_support::dispatch::DispatchErrorWithPostInfo;
 pub trait DelegatorActions<AccountId, Balance> {
 	fn delegator_bond_more(
 		delegator: &AccountId,
 		candidate: &AccountId,
 		more: Balance,
 	) -> Result<bool, sp_runtime::DispatchError>;
+	fn is_delegation_exist(delegator: &AccountId, candidate: &AccountId) -> bool;
 	fn get_delegator_stakable_free_balance(delegator: &AccountId) -> Balance;
 	#[cfg(feature = "runtime-benchmarks")]
-	fn setup_delegator(collator: &AccountId, delegator: &AccountId) -> DispatchResultWithPostInfo;
+	fn setup_delegator(collator: &AccountId, delegator: &AccountId) -> frame_support::pallet_prelude::DispatchResultWithPostInfo;
 }
 
 use sp_runtime::traits::Zero;
