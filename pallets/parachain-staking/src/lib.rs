@@ -1996,7 +1996,7 @@ pub mod pallet {
 			candidate: &T::AccountId,
 			minimum: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
-			log::error!("delegator_bond_till_minimum, Error::<T>::InsufficientBalance": Error::<T>::InsufficientBalance);
+			log::error!("delegator_bond_till_minimum, Error::<T>::InsufficientBalance", Error::<T>::InsufficientBalance);
 			Self::get_delegator_stakable_free_balance(delegator)
 				.checked_sub(&minimum)
 				.ok_or(Error::<T>::InsufficientBalance.into())
