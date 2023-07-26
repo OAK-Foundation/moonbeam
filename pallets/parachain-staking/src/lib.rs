@@ -1997,16 +1997,16 @@ pub mod pallet {
 			minimum: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
 			log::error!("delegator_bond_till_minimum, Error::<T>::InsufficientBalance, {:?}", Error::<T>::InsufficientBalance);
-			Err(Error::<T>::InsufficientBalance.into())
-			Self::get_delegator_stakable_free_balance(delegator)
-				.checked_sub(&minimum)
-				.ok_or(Error::<T>::InsufficientBalance.into())
-				.and_then(|delegation| {
-					<Self as DelegatorActions<T::AccountId, BalanceOf<T>>>::delegator_bond_more(
-						delegator, candidate, delegation,
-					)?;
-					Ok(delegation)
-				})
+			return Err(Error::<T>::InsufficientBalance.into());
+			// Self::get_delegator_stakable_free_balance(delegator)
+			// 	.checked_sub(&minimum)
+			// 	.ok_or(Error::<T>::InsufficientBalance.into())
+			// 	.and_then(|delegation| {
+			// 		<Self as DelegatorActions<T::AccountId, BalanceOf<T>>>::delegator_bond_more(
+			// 			delegator, candidate, delegation,
+			// 		)?;
+			// 		Ok(delegation)
+			// 	})
 		}
 
 		#[cfg(feature = "runtime-benchmarks")]
