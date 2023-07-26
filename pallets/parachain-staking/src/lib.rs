@@ -1996,6 +1996,11 @@ pub mod pallet {
 			candidate: &T::AccountId,
 			minimum: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchErrorWithPostInfo> {
+			let mut state = <DelegatorState<T>>::get(delegator).ok_or(<Error<T>>::DelegatorDNE)?;
+			let _ = state
+				.get_bond_amount(candidate)
+				.ok_or(<Error<T>>::DelegationDNE)?;
+
 			Self::get_delegator_stakable_free_balance(delegator)
 				.checked_sub(&minimum)
 				.ok_or(Error::<T>::InsufficientBalance.into())
