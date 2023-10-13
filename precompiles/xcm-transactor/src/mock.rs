@@ -17,6 +17,7 @@
 //! Test utilities
 use crate::v1::{XcmTransactorPrecompileV1, XcmTransactorPrecompileV1Call};
 use crate::v2::{XcmTransactorPrecompileV2, XcmTransactorPrecompileV2Call};
+use crate::v3::{XcmTransactorPrecompileV3, XcmTransactorPrecompileV3Call};
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, Everything, OriginTrait, PalletInfo as PalletInfoTrait},
@@ -130,6 +131,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
@@ -147,11 +152,13 @@ pub type Precompiles<R> = PrecompileSetBuilder<
 	(
 		PrecompileAt<AddressU64<1>, XcmTransactorPrecompileV1<R>, CallableByContract>,
 		PrecompileAt<AddressU64<2>, XcmTransactorPrecompileV2<R>, CallableByContract>,
+		PrecompileAt<AddressU64<4>, XcmTransactorPrecompileV3<R>, CallableByContract>,
 	),
 >;
 
 mock_account!(TransactorV1, |_| MockAccount::from_u64(1));
 mock_account!(TransactorV2, |_| MockAccount::from_u64(2));
+mock_account!(TransactorV3, |_| MockAccount::from_u64(4));
 mock_account!(SelfReserveAddress, |_| MockAccount::from_u64(3));
 mock_account!(AssetAddress(u128), |value: AssetAddress| {
 	AddressInPrefixedSet(0xffffffff, value.0).into()
@@ -159,11 +166,24 @@ mock_account!(AssetAddress(u128), |value: AssetAddress| {
 
 pub type PCallV1 = XcmTransactorPrecompileV1Call<Runtime>;
 pub type PCallV2 = XcmTransactorPrecompileV2Call<Runtime>;
+pub type PCallV3 = XcmTransactorPrecompileV3Call<Runtime>;
+
+const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
+/// Block storage limit in bytes. Set to 40 KB.
+const BLOCK_STORAGE_LIMIT: u64 = 40 * 1024;
 
 parameter_types! {
-	pub BlockGasLimit: U256 = U256::max_value();
+	pub BlockGasLimit: U256 = U256::from(u64::MAX);
 	pub PrecompilesValue: Precompiles<Runtime> = Precompiles::new();
-	pub const WeightPerGas: Weight = Weight::from_ref_time(1);
+	pub const WeightPerGas: Weight = Weight::from_parts(1, 0);
+	pub GasLimitPovSizeRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(MAX_POV_SIZE)
+	};
+	pub GasLimitStorageGrowthRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(BLOCK_STORAGE_LIMIT)
+	};
 }
 
 /// A mapping function that converts Ethereum gas to Substrate weight
@@ -171,7 +191,7 @@ parameter_types! {
 pub struct MockGasWeightMapping;
 impl GasWeightMapping for MockGasWeightMapping {
 	fn gas_to_weight(gas: u64, _without_base_weight: bool) -> Weight {
-		Weight::from_ref_time(gas)
+		Weight::from_parts(gas, 1)
 	}
 	fn weight_to_gas(weight: Weight) -> u64 {
 		weight.ref_time().into()
@@ -196,6 +216,10 @@ impl pallet_evm::Config for Runtime {
 	type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
 	type FindAuthor = ();
 	type OnCreate = ();
+	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
+	type GasLimitStorageGrowthRatio = GasLimitStorageGrowthRatio;
+	type Timestamp = Timestamp;
+	type WeightInfo = pallet_evm::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -216,8 +240,8 @@ impl<Origin: OriginTrait> EnsureOrigin<Origin> for ConvertOriginToLocal {
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::root()
+	fn try_successful_origin() -> Result<Origin, ()> {
+		Ok(Origin::root())
 	}
 }
 

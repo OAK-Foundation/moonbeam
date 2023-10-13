@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
 use crate::mock::{
-	AssetAddress, ExtBuilder, PCallV1, PCallV2, Precompiles, PrecompilesValue, Runtime,
-	RuntimeOrigin, TransactorV1, TransactorV2, XcmTransactor,
+	AssetAddress, ExtBuilder, PCallV1, PCallV2, PCallV3, Precompiles, PrecompilesValue, Runtime,
+	RuntimeOrigin, TransactorV1, TransactorV2, TransactorV3, XcmTransactor,
 };
 
 use frame_support::{assert_ok, dispatch::Weight};
@@ -46,6 +46,14 @@ fn selectors() {
 	assert!(PCallV2::transact_through_derivative_selectors().contains(&0x185de2ae));
 	assert!(PCallV2::transact_through_signed_multilocation_selectors().contains(&0xd7ab340c));
 	assert!(PCallV2::transact_through_signed_selectors().contains(&0xb648f3fe));
+
+	assert!(PCallV3::index_to_account_selectors().contains(&0x3fdc4f36));
+	assert!(PCallV3::transact_info_with_signed_selectors().contains(&0xb689e20c));
+	assert!(PCallV3::fee_per_second_selectors().contains(&0x906c9990));
+	assert!(PCallV3::transact_through_derivative_multilocation_selectors().contains(&0xbdacc26b));
+	assert!(PCallV3::transact_through_derivative_selectors().contains(&0xca8c82d8));
+	assert!(PCallV3::transact_through_signed_multilocation_selectors().contains(&0x27b1d492));
+	assert!(PCallV3::transact_through_signed_selectors().contains(&0xb18270cf));
 }
 
 #[test]
@@ -119,11 +127,7 @@ fn take_index_for_account() {
 				.prepare_test(Alice, TransactorV1, input)
 				.expect_cost(1)
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write(Address(H160::from(Alice)))
-						.build(),
-				);
+				.execute_returns(Address(H160::from(Alice)));
 		});
 }
 
@@ -163,13 +167,7 @@ fn take_transact_info() {
 				.prepare_test(Alice, TransactorV1, input)
 				.expect_cost(2)
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write(0u64)
-						.write(1u128)
-						.write(10000u64)
-						.build(),
-				);
+				.execute_returns((0u64, 1u128, 10000u64));
 		});
 }
 #[test]
@@ -208,13 +206,7 @@ fn take_transact_info_with_signed() {
 				.prepare_test(Alice, TransactorV1, input)
 				.expect_cost(1)
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write(0u64)
-						.write(1u128)
-						.write(10000u64)
-						.build(),
-				);
+				.execute_returns((0u64, 1u128, 10_000u64));
 		});
 }
 
@@ -244,7 +236,7 @@ fn take_fee_per_second() {
 				.prepare_test(Alice, TransactorV1, input)
 				.expect_cost(1)
 				.expect_no_logs()
-				.execute_returns_encoded(1u64);
+				.execute_returns(1u64);
 		});
 }
 
@@ -282,9 +274,100 @@ fn test_transact_derivative_multilocation_v2() {
 						overall_weight: total_weight,
 					},
 				)
-				.expect_cost(196892000)
+				.expect_cost(188253000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
+		});
+}
+
+#[test]
+fn test_transact_derivative_multilocation_v3() {
+	ExtBuilder::default()
+		.with_balances(vec![(Alice.into(), 1000)])
+		.build()
+		.execute_with(|| {
+			// register index
+			assert_ok!(XcmTransactor::register(
+				RuntimeOrigin::root(),
+				Alice.into(),
+				0
+			));
+
+			// we pay with our current self reserve.
+			let fee_payer_asset = MultiLocation::parent();
+
+			let bytes = vec![1u8, 2u8, 3u8];
+
+			//let total_weight = 1_000_000_000u64;
+			let total_weight = Weight::from_parts(1_000_000_000u64, 82_000u64);
+			let require_weight_at_most = Weight::from_parts(4_000_000u64, 82_000u64);
+			// We are transferring asset 0, which we have instructed to be the relay asset
+			precompiles()
+				.prepare_test(
+					Alice,
+					TransactorV3,
+					PCallV3::transact_through_derivative_multilocation {
+						transactor: 0,
+						index: 0,
+						fee_asset: fee_payer_asset,
+						weight: require_weight_at_most,
+						inner_call: bytes.into(),
+						fee_amount: u128::from(total_weight.ref_time()).into(),
+						overall_weight: total_weight,
+						refund: false,
+					},
+				)
+				.expect_cost(188253000)
+				.expect_no_logs()
+				.execute_returns(());
+		});
+}
+
+#[test]
+fn take_transact_info_with_signed_v3() {
+	ExtBuilder::default()
+		.with_balances(vec![(Alice.into(), 1000)])
+		.build()
+		.execute_with(|| {
+			let input: Vec<_> = PCallV3::transact_info_with_signed {
+				multilocation: MultiLocation::parent(),
+			}
+			.into();
+
+			// Assert that errors since no index is assigned
+			precompiles()
+				.prepare_test(Alice, TransactorV3, input.clone())
+				.execute_reverts(|output| output == b"Transact Info not set");
+
+			// Root can set transact info
+			assert_ok!(XcmTransactor::set_transact_info(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				Weight::zero(),
+				10000u64.into(),
+				Some(1.into())
+			));
+
+			// Root can set fee per second
+			assert_ok!(XcmTransactor::set_fee_per_second(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				1
+			));
+
+			let expected_max_weight: Weight = 10_000u64.into();
+			let expected_transact_extra_weight_signed: Weight = 1u64.into();
+			let expected_transact_extra_weight: Weight = 0u64.into();
+
+			precompiles()
+				.prepare_test(Alice, TransactorV3, input)
+				.expect_cost(1)
+				.expect_no_logs()
+				.execute_returns((
+					expected_transact_extra_weight,
+					expected_transact_extra_weight_signed,
+					expected_max_weight,
+				));
 		});
 }
 
@@ -335,9 +418,9 @@ fn test_transact_derivative_multilocation() {
 						inner_call: bytes.into(),
 					},
 				)
-				.expect_cost(196892000)
+				.expect_cost(188253000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
@@ -385,9 +468,9 @@ fn test_transact_derivative() {
 						inner_call: bytes.into(),
 					},
 				)
-				.expect_cost(196892001)
+				.expect_cost(188254000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
@@ -423,9 +506,50 @@ fn test_transact_derivative_v2() {
 						overall_weight: total_weight,
 					},
 				)
-				.expect_cost(196892001)
+				.expect_cost(188254000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
+		});
+}
+
+#[test]
+fn test_transact_derivative_v3() {
+	ExtBuilder::default()
+		.with_balances(vec![(Alice.into(), 1000)])
+		.build()
+		.execute_with(|| {
+			// register index
+			assert_ok!(XcmTransactor::register(
+				RuntimeOrigin::root(),
+				Alice.into(),
+				0
+			));
+
+			let bytes = vec![1u8, 2u8, 3u8];
+
+			//let total_weight = 1_000_000_000u64;
+			let total_weight = Weight::from_parts(1_000_000_000u64, 82_000u64);
+			let require_weight_at_most = Weight::from_parts(4_000_000u64, 82_000u64);
+
+			// We are transferring asset 0, which we have instructed to be the relay asset
+			precompiles()
+				.prepare_test(
+					Alice,
+					TransactorV3,
+					PCallV3::transact_through_derivative {
+						transactor: 0,
+						index: 0,
+						fee_asset: Address(AssetAddress(0).into()),
+						weight: require_weight_at_most,
+						inner_call: bytes.into(),
+						fee_amount: u128::from(total_weight.ref_time()).into(),
+						overall_weight: total_weight,
+						refund: false,
+					},
+				)
+				.expect_cost(188254000)
+				.expect_no_logs()
+				.execute_returns(());
 		});
 }
 
@@ -468,9 +592,9 @@ fn test_transact_signed() {
 						call: bytes.into(),
 					},
 				)
-				.expect_cost(476974001)
+				.expect_cost(468449000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
@@ -501,9 +625,47 @@ fn test_transact_signed_v2() {
 						overall_weight: total_weight,
 					},
 				)
-				.expect_cost(476974001)
+				.expect_cost(468449000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
+		});
+}
+
+#[test]
+fn test_transact_signed_v3() {
+	ExtBuilder::default()
+		.with_balances(vec![(Alice.into(), 1000)])
+		.build()
+		.execute_with(|| {
+			// register index
+			assert_ok!(XcmTransactor::register(
+				RuntimeOrigin::root(),
+				Alice.into(),
+				0
+			));
+
+			let bytes = vec![1u8, 2u8, 3u8];
+
+			let total_weight = Weight::from_parts(1_000_000_000u64, 82_000u64);
+			let require_weight_at_most = Weight::from_parts(4_000_000u64, 82_000u64);
+			// We are transferring asset 0, which we have instructed to be the relay asset
+			precompiles()
+				.prepare_test(
+					Alice,
+					TransactorV3,
+					PCallV3::transact_through_signed {
+						dest: MultiLocation::parent(),
+						fee_asset: Address(AssetAddress(0).into()),
+						weight: require_weight_at_most,
+						call: bytes.into(),
+						fee_amount: u128::from(total_weight.ref_time()).into(),
+						overall_weight: total_weight,
+						refund: false,
+					},
+				)
+				.expect_cost(468449000)
+				.expect_no_logs()
+				.execute_returns(());
 		});
 }
 
@@ -548,9 +710,9 @@ fn test_transact_signed_multilocation() {
 						call: bytes.into(),
 					},
 				)
-				.expect_cost(476974000)
+				.expect_cost(468448000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
@@ -583,60 +745,75 @@ fn test_transact_signed_multilocation_v2() {
 						overall_weight: total_weight,
 					},
 				)
-				.expect_cost(476974000)
+				.expect_cost(468448000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
+		});
+}
+
+#[test]
+fn test_transact_through_signed_multilocation_v3() {
+	ExtBuilder::default()
+		.with_balances(vec![(Alice.into(), 1000)])
+		.build()
+		.execute_with(|| {
+			// register index
+			assert_ok!(XcmTransactor::register(
+				RuntimeOrigin::root(),
+				Alice.into(),
+				0
+			));
+
+			// we pay with our current self reserve.
+			let fee_payer_asset = MultiLocation::parent();
+
+			let bytes = vec![1u8, 2u8, 3u8];
+
+			let total_weight = Weight::from_parts(1_000_000_000u64, 82_000u64);
+			let require_weight_at_most = Weight::from_parts(4_000_000u64, 82_000u64);
+			// We are transferring asset 0, which we have instructed to be the relay asset
+			precompiles()
+				.prepare_test(
+					Alice,
+					TransactorV3,
+					PCallV3::transact_through_signed_multilocation {
+						dest: MultiLocation::parent(),
+						fee_asset: fee_payer_asset,
+						weight: require_weight_at_most,
+						call: bytes.into(),
+						fee_amount: u128::from(total_weight.ref_time()).into(),
+						overall_weight: total_weight,
+						refund: false,
+					},
+				)
+				.expect_cost(468448000)
+				.expect_no_logs()
+				.execute_returns(());
 		});
 }
 
 #[test]
 fn test_solidity_interface_has_all_function_selectors_documented_and_implemented_v1() {
-	for file in ["src/v1/XcmTransactorV1.sol"] {
-		for solidity_fn in solidity::get_selectors(file) {
-			assert_eq!(
-				solidity_fn.compute_selector_hex(),
-				solidity_fn.docs_selector,
-				"documented selector for '{}' did not match for file '{}'",
-				solidity_fn.signature(),
-				file,
-			);
-
-			let selector = solidity_fn.compute_selector();
-			if !PCallV1::supports_selector(selector) {
-				panic!(
-					"failed decoding selector 0x{:x} => '{}' as Action for file '{}'",
-					selector,
-					solidity_fn.signature(),
-					file,
-				)
-			}
-		}
-	}
+	check_precompile_implements_solidity_interfaces(
+		&["src/v1/XcmTransactorV1.sol"],
+		PCallV1::supports_selector,
+	)
 }
 
 #[test]
 fn test_solidity_interface_has_all_function_selectors_documented_and_implemented_v2() {
-	for file in ["src/v2/XcmTransactorV2.sol"] {
-		for solidity_fn in solidity::get_selectors(file) {
-			assert_eq!(
-				solidity_fn.compute_selector_hex(),
-				solidity_fn.docs_selector,
-				"documented selector for '{}' did not match for file '{}'",
-				solidity_fn.signature(),
-				file,
-			);
+	check_precompile_implements_solidity_interfaces(
+		&["src/v2/XcmTransactorV2.sol"],
+		PCallV2::supports_selector,
+	)
+}
 
-			let selector = solidity_fn.compute_selector();
-			if !PCallV2::supports_selector(selector) {
-				panic!(
-					"failed decoding selector 0x{:x} => '{}' as Action for file '{}'",
-					selector,
-					solidity_fn.signature(),
-					file,
-				)
-			}
-		}
-	}
+#[test]
+fn test_solidity_interface_has_all_function_selectors_documented_and_implemented_v3() {
+	check_precompile_implements_solidity_interfaces(
+		&["src/v3/XcmTransactorV3.sol"],
+		PCallV3::supports_selector,
+	)
 }
 
 #[test]
@@ -651,7 +828,7 @@ fn test_deprecated_solidity_selectors_are_supported() {
 		"transact_through_signed_multilocation((uint8,bytes[]),(uint8,bytes[]),uint64,bytes)",
 		"transact_through_signed((uint8,bytes[]),address,uint64,bytes)",
 	] {
-		let selector = solidity::compute_selector(deprecated_function);
+		let selector = compute_selector(deprecated_function);
 		if !PCallV1::supports_selector(selector) {
 			panic!(
 				"failed decoding selector 0x{:x} => '{}' as Action",

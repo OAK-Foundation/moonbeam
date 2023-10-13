@@ -23,6 +23,7 @@ use super::{
 	FOREIGN_ASSET_PRECOMPILE_ADDRESS_PREFIX, LOCAL_ASSET_PRECOMPILE_ADDRESS_PREFIX,
 };
 
+use moonbeam_runtime_common::weights as moonbeam_weights;
 use pallet_evm_precompileset_assets_erc20::AccountIdAssetIdConversion;
 use sp_runtime::traits::Hash as THash;
 
@@ -77,6 +78,19 @@ pub type AssetsForceOrigin = EitherOfDiverse<
 	>,
 >;
 
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+	pub struct BenchmarkHelper;
+	impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter> for BenchmarkHelper
+	where
+		AssetIdParameter: From<u128>,
+	{
+		fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+			(id as u128).into()
+		}
+	}
+}
+
 // Foreign assets
 impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -92,11 +106,14 @@ impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = ConstU128<{ currency::deposit(1, 18) }>;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_assets::WeightInfo<Runtime>;
 	type RemoveItemsLimit = ConstU32<{ REMOVE_ITEMS_LIMIT }>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 // Local assets
@@ -114,11 +131,14 @@ impl pallet_assets::Config<LocalAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = ConstU128<{ currency::deposit(1, 18) }>;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_assets::WeightInfo<Runtime>;
 	type RemoveItemsLimit = ConstU32<{ REMOVE_ITEMS_LIMIT }>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 // We instruct how to register the Assets
@@ -290,7 +310,7 @@ impl pallet_asset_manager::Config for Runtime {
 	type LocalAssetIdCreator = LocalAssetIdCreator;
 	type Currency = Balances;
 	type LocalAssetDeposit = AssetDeposit;
-	type WeightInfo = pallet_asset_manager::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_asset_manager::WeightInfo<Runtime>;
 }
 
 // Instruct how to go from an H160 to an AssetID

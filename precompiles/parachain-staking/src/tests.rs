@@ -73,9 +73,6 @@ fn selectors() {
 	assert!(PCall::execute_candidate_bond_less_selectors().contains(&0x2e290290));
 	assert!(PCall::cancel_candidate_bond_less_selectors().contains(&0xb5ad5f07));
 	assert!(PCall::delegate_selectors().contains(&0x829f5ee3));
-	assert!(PCall::schedule_leave_delegators_selectors().contains(&0xf939dadb));
-	assert!(PCall::execute_leave_delegators_selectors().contains(&0xfb1e2bf9));
-	assert!(PCall::cancel_leave_delegators_selectors().contains(&0xf7421284));
 	assert!(PCall::schedule_revoke_delegation_selectors().contains(&0x1a1c740c));
 	assert!(PCall::delegator_bond_more_selectors().contains(&0x0465135b));
 	assert!(PCall::schedule_delegator_bond_less_selectors().contains(&0xc172fd2b));
@@ -116,9 +113,6 @@ fn modifiers() {
 		tester.test_default_modifier(PCall::execute_candidate_bond_less_selectors());
 		tester.test_default_modifier(PCall::cancel_candidate_bond_less_selectors());
 		tester.test_default_modifier(PCall::delegate_selectors());
-		tester.test_default_modifier(PCall::schedule_leave_delegators_selectors());
-		tester.test_default_modifier(PCall::execute_leave_delegators_selectors());
-		tester.test_default_modifier(PCall::cancel_leave_delegators_selectors());
 		tester.test_default_modifier(PCall::schedule_revoke_delegation_selectors());
 		tester.test_default_modifier(PCall::delegator_bond_more_selectors());
 		tester.test_default_modifier(PCall::schedule_delegator_bond_less_selectors());
@@ -154,7 +148,7 @@ fn min_delegation_works() {
 			.prepare_test(Alice, Precompile1, PCall::min_delegation {})
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(3u32)
+			.execute_returns(3u32)
 	});
 }
 
@@ -170,7 +164,7 @@ fn points_zero() {
 				.prepare_test(Alice, Precompile1, PCall::points { round: 1.into() })
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(0u32);
+				.execute_returns(0u32);
 		});
 }
 
@@ -188,7 +182,7 @@ fn points_non_zero() {
 				.prepare_test(Alice, Precompile1, PCall::points { round: 1.into() })
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(100u32);
+				.execute_returns(100u32);
 		});
 }
 
@@ -212,7 +206,7 @@ fn awarded_points_zero() {
 				)
 				.expect_cost(0)
 				.expect_no_logs()
-				.execute_returns_encoded(0u32);
+				.execute_returns(0u32);
 		});
 }
 
@@ -237,7 +231,7 @@ fn awarded_points_non_zero() {
 				)
 				.expect_cost(0)
 				.expect_no_logs()
-				.execute_returns_encoded(100u32);
+				.execute_returns(100u32);
 		});
 }
 
@@ -258,7 +252,7 @@ fn delegation_amount_zero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(0u32);
+				.execute_returns(0u32);
 		});
 }
 
@@ -281,7 +275,7 @@ fn delegation_amount_nonzero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(1000u32);
+				.execute_returns(1000u32);
 		});
 }
 
@@ -302,7 +296,7 @@ fn is_not_in_top_delegations_when_delegation_dne() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 		});
 }
 
@@ -334,7 +328,7 @@ fn is_not_in_top_delegations_because_not_in_top() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 		});
 }
 
@@ -357,7 +351,7 @@ fn is_in_top_delegations() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		});
 }
 
@@ -368,7 +362,7 @@ fn round_works() {
 			.prepare_test(Alice, Precompile1, PCall::round {})
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(1u32);
+			.execute_returns(1u32);
 
 		// test next `ROUNDS_TO_TEST` rounds
 		const ROUNDS_TO_TEST: u32 = 10;
@@ -382,7 +376,7 @@ fn round_works() {
 				.prepare_test(Alice, Precompile1, PCall::round {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(current_round);
+				.execute_returns(current_round);
 		}
 	});
 }
@@ -415,7 +409,7 @@ fn candidate_delegation_count_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(3u32);
+				.execute_returns(3u32);
 		});
 }
 
@@ -453,7 +447,7 @@ fn candidate_auto_compounding_delegation_count_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(1u32);
+				.execute_returns(1u32);
 		});
 }
 
@@ -485,7 +479,7 @@ fn candidate_auto_compounding_elegation_count_works_with_zero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(0u32);
+				.execute_returns(0u32);
 		});
 }
 
@@ -515,7 +509,7 @@ fn delegator_delegation_count_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(2u32);
+				.execute_returns(2u32);
 		});
 }
 
@@ -533,7 +527,7 @@ fn is_delegator_false() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	});
 }
 
@@ -556,7 +550,7 @@ fn is_delegator_true() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		});
 }
 
@@ -574,7 +568,7 @@ fn is_candidate_false() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	});
 }
 
@@ -596,7 +590,7 @@ fn is_candidate_true() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		});
 }
 
@@ -614,7 +608,7 @@ fn is_selected_candidate_false() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	});
 }
 
@@ -636,7 +630,7 @@ fn is_selected_candidate_true() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		});
 }
 
@@ -651,11 +645,7 @@ fn selected_candidates_works() {
 				.prepare_test(Alice, Precompile1, PCall::selected_candidates {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write(vec![Address(Alice.into())])
-						.build(),
-				);
+				.execute_returns(vec![Address(Alice.into())]);
 		});
 }
 
@@ -683,7 +673,7 @@ fn delegation_request_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 
 			// Schedule Revoke request
 			precompiles()
@@ -694,9 +684,9 @@ fn delegation_request_is_pending_works() {
 						candidate: Address(Alice.into()),
 					},
 				)
-				.expect_cost(293131000)
+				.expect_cost(287044881)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 
 			// Assert that we have pending requests
 			precompiles()
@@ -710,7 +700,7 @@ fn delegation_request_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		})
 }
 
@@ -729,7 +719,7 @@ fn delegation_request_is_pending_returns_false_for_non_existing_delegator() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	})
 }
 
@@ -751,7 +741,7 @@ fn candidate_exit_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 
 			// Schedule exit request
 			precompiles()
@@ -762,9 +752,9 @@ fn candidate_exit_is_pending_works() {
 						candidate_count: 1.into(),
 					},
 				)
-				.expect_cost(325075534)
+				.expect_cost(281799929)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 
 			// Assert that we have pending exit
 			precompiles()
@@ -777,7 +767,7 @@ fn candidate_exit_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		})
 }
 
@@ -795,7 +785,7 @@ fn candidate_exit_is_pending_returns_false_for_non_existing_delegator() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	})
 }
 
@@ -817,7 +807,7 @@ fn candidate_request_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 
 			// Schedule bond less request
 			precompiles()
@@ -826,9 +816,9 @@ fn candidate_request_is_pending_works() {
 					Precompile1,
 					PCall::schedule_candidate_bond_less { less: 0.into() },
 				)
-				.expect_cost(163239000)
+				.expect_cost(146541000)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 
 			// Assert that we have pending requests
 			precompiles()
@@ -841,7 +831,7 @@ fn candidate_request_is_pending_works() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		})
 }
 
@@ -859,7 +849,7 @@ fn candidate_request_is_pending_returns_false_for_non_existing_candidate() {
 			)
 			.expect_cost(0) // TODO: Test db read/write costs
 			.expect_no_logs()
-			.execute_returns_encoded(false);
+			.execute_returns(false);
 	})
 }
 
@@ -887,7 +877,7 @@ fn delegation_auto_compound_returns_value_if_set() {
 				)
 				.expect_cost(0)
 				.expect_no_logs()
-				.execute_returns_encoded(50u8);
+				.execute_returns(50u8);
 		})
 }
 
@@ -910,7 +900,7 @@ fn delegation_auto_compound_returns_zero_if_not_set() {
 				)
 				.expect_cost(0)
 				.expect_no_logs()
-				.execute_returns_encoded(0u8);
+				.execute_returns(0u8);
 		})
 }
 
@@ -1228,90 +1218,6 @@ fn delegate_works() {
 					new_total: 2_000,
 				},
 				auto_compound: Percent::zero(),
-			}
-			.into();
-			// Assert that the events vector contains the one expected
-			assert!(events().contains(&expected));
-		});
-}
-
-#[test]
-fn schedule_leave_delegators_works() {
-	ExtBuilder::default()
-		.with_balances(vec![(Alice.into(), 1_000), (Bob.into(), 1_000)])
-		.with_candidates(vec![(Alice.into(), 1_000)])
-		.with_delegations(vec![(Bob.into(), Alice.into(), 1_000)])
-		.build()
-		.execute_with(|| {
-			let input_data = PCall::schedule_leave_delegators {}.into();
-
-			// Make sure the call goes through successfully
-			assert_ok!(RuntimeCall::Evm(evm_call(Bob, input_data)).dispatch(RuntimeOrigin::root()));
-
-			let expected: crate::mock::RuntimeEvent = StakingEvent::DelegatorExitScheduled {
-				round: 1,
-				delegator: Bob.into(),
-				scheduled_exit: 3,
-			}
-			.into();
-			// Assert that the events vector contains the one expected
-			assert!(events().contains(&expected));
-		});
-}
-
-#[test]
-fn execute_leave_delegators_works() {
-	ExtBuilder::default()
-		.with_balances(vec![(Alice.into(), 1_000), (Bob.into(), 500)])
-		.with_candidates(vec![(Alice.into(), 1_000)])
-		.with_delegations(vec![(Bob.into(), Alice.into(), 500)])
-		.build()
-		.execute_with(|| {
-			assert_ok!(ParachainStaking::schedule_leave_delegators(
-				RuntimeOrigin::signed(Bob.into())
-			));
-			roll_to(10);
-
-			let input_data = PCall::execute_leave_delegators {
-				delegator: Address(Bob.into()),
-				delegator_delegation_count: 1.into(),
-			}
-			.into();
-
-			// Make sure the call goes through successfully
-			assert_ok!(
-				RuntimeCall::Evm(evm_call(Alice, input_data)).dispatch(RuntimeOrigin::root())
-			);
-
-			let expected: crate::mock::RuntimeEvent = StakingEvent::DelegatorLeft {
-				delegator: Bob.into(),
-				unstaked_amount: 500,
-			}
-			.into();
-			// Assert that the events vector contains the one expected
-			assert!(events().contains(&expected));
-		});
-}
-
-#[test]
-fn cancel_leave_delegators_works() {
-	ExtBuilder::default()
-		.with_balances(vec![(Alice.into(), 1_000), (Bob.into(), 500)])
-		.with_candidates(vec![(Alice.into(), 1_000)])
-		.with_delegations(vec![(Bob.into(), Alice.into(), 500)])
-		.build()
-		.execute_with(|| {
-			assert_ok!(ParachainStaking::schedule_leave_delegators(
-				RuntimeOrigin::signed(Bob.into())
-			));
-
-			let input_data = PCall::cancel_leave_delegators {}.into();
-
-			// Make sure the call goes through successfully
-			assert_ok!(RuntimeCall::Evm(evm_call(Bob, input_data)).dispatch(RuntimeOrigin::root()));
-
-			let expected: crate::mock::RuntimeEvent = StakingEvent::DelegatorExitCancelled {
-				delegator: Bob.into(),
 			}
 			.into();
 			// Assert that the events vector contains the one expected
@@ -1734,7 +1640,7 @@ fn get_delegator_total_staked_getter() {
 						delegator: Address(Charlie.into()),
 					},
 				)
-				.execute_returns_encoded(U256::from(1_499));
+				.execute_returns(U256::from(1_499));
 		});
 }
 
@@ -1757,7 +1663,7 @@ fn get_delegator_total_staked_getter_unknown() {
 						delegator: Address(Charlie.into()),
 					},
 				)
-				.execute_returns_encoded(U256::zero());
+				.execute_returns(U256::zero());
 		});
 }
 
@@ -1784,33 +1690,16 @@ fn get_candidate_total_counted_getter() {
 						candidate: Address(Alice.into()),
 					},
 				)
-				.execute_returns_encoded(U256::from(2_000));
+				.execute_returns(U256::from(2_000));
 		});
 }
 
 #[test]
 fn test_solidity_interface_has_all_function_selectors_documented_and_implemented() {
-	for file in ["StakingInterface.sol"] {
-		for solidity_fn in solidity::get_selectors(file) {
-			assert_eq!(
-				solidity_fn.compute_selector_hex(),
-				solidity_fn.docs_selector,
-				"documented selector for '{}' did not match for file '{}'",
-				solidity_fn.signature(),
-				file,
-			);
-
-			let selector = solidity_fn.compute_selector();
-			if !PCall::supports_selector(selector) {
-				panic!(
-					"failed decoding selector 0x{:x} => '{}' as Action for file '{}'",
-					selector,
-					solidity_fn.signature(),
-					file,
-				)
-			}
-		}
-	}
+	check_precompile_implements_solidity_interfaces(
+		&["StakingInterface.sol"],
+		PCall::supports_selector,
+	)
 }
 
 #[test]
@@ -1837,16 +1726,13 @@ fn test_deprecated_solidity_selectors_are_supported() {
 		"candidate_bond_more(uint256)",
 		"execute_candidate_bond_less(address)",
 		"cancel_candidate_bond_less()",
-		"schedule_leave_delegators()",
-		"execute_leave_delegators(address,uint256)",
-		"cancel_leave_delegators()",
 		"schedule_revoke_delegation(address)",
 		"schedule_delegator_bond_less(address,uint256)",
 		"delegator_bond_more(address,uint256)",
 		"execute_delegation_request(address,address)",
 		"cancel_delegation_request(address)",
 	] {
-		let selector = solidity::compute_selector(deprecated_function);
+		let selector = compute_selector(deprecated_function);
 		if !PCall::supports_selector(selector) {
 			panic!(
 				"failed decoding selector 0x{:x} => '{}' as Action",

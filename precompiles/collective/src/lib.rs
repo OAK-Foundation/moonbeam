@@ -65,9 +65,9 @@ pub fn log_proposed(
 		address.into(),
 		SELECTOR_LOG_PROPOSED,
 		who.into(),
-		H256::from_slice(&EvmDataWriter::new().write(index).build()),
+		H256::from_slice(&solidity::encode_arguments(index)),
 		hash,
-		EvmDataWriter::new().write(threshold).build(),
+		solidity::encode_arguments(threshold),
 	)
 }
 
@@ -77,7 +77,7 @@ pub fn log_voted(address: impl Into<H160>, who: impl Into<H160>, hash: H256, vot
 		SELECTOR_LOG_VOTED,
 		who.into(),
 		hash,
-		EvmDataWriter::new().write(voted).build(),
+		solidity::encode_arguments(voted),
 	)
 }
 
@@ -136,6 +136,7 @@ where
 				proposal,
 				length_bound: proposal_length,
 			},
+			SYSTEM_ACCOUNT_SIZE,
 		)?;
 
 		log.record(handle)?;
@@ -149,7 +150,8 @@ where
 		threshold: u32,
 		proposal: BoundedBytes<GetProposalLimit>,
 	) -> EvmResult<u32> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// ProposalCount
+		handle.record_db_read::<Runtime>(4)?;
 
 		let proposal: Vec<_> = proposal.into();
 		let proposal_length: u32 = proposal.len().try_into().map_err(|_| {
@@ -195,6 +197,7 @@ where
 					proposal,
 					length_bound: proposal_length,
 				},
+				SYSTEM_ACCOUNT_SIZE,
 			)?;
 		}
 
@@ -229,6 +232,7 @@ where
 				index: proposal_index,
 				approve,
 			},
+			SYSTEM_ACCOUNT_SIZE,
 		)?;
 
 		log.record(handle)?;
@@ -261,6 +265,7 @@ where
 				),
 				length_bound,
 			},
+			SYSTEM_ACCOUNT_SIZE,
 		)?;
 
 		// We can know if the proposal was executed or not based on the `pays_fee` in
@@ -289,7 +294,10 @@ where
 	#[precompile::public("proposals()")]
 	#[precompile::view]
 	fn proposals(handle: &mut impl PrecompileHandle) -> EvmResult<Vec<H256>> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Proposals: BoundedVec(32 * MaxProposals)
+		handle.record_db_read::<Runtime>(
+			32 * (<Runtime as pallet_collective::Config<Instance>>::MaxProposals::get() as usize),
+		)?;
 
 		let proposals = pallet_collective::Pallet::<Runtime, Instance>::proposals();
 		let proposals: Vec<_> = proposals.into_iter().map(|hash| hash.into()).collect();
@@ -300,7 +308,10 @@ where
 	#[precompile::public("members()")]
 	#[precompile::view]
 	fn members(handle: &mut impl PrecompileHandle) -> EvmResult<Vec<Address>> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Members: Vec(20 * MaxMembers)
+		handle.record_db_read::<Runtime>(
+			20 * (<Runtime as pallet_collective::Config<Instance>>::MaxProposals::get() as usize),
+		)?;
 
 		let members = pallet_collective::Pallet::<Runtime, Instance>::members();
 		let members: Vec<_> = members.into_iter().map(|id| Address(id.into())).collect();
@@ -311,7 +322,10 @@ where
 	#[precompile::public("isMember(address)")]
 	#[precompile::view]
 	fn is_member(handle: &mut impl PrecompileHandle, account: Address) -> EvmResult<bool> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Members: Vec(20 * MaxMembers)
+		handle.record_db_read::<Runtime>(
+			20 * (<Runtime as pallet_collective::Config<Instance>>::MaxProposals::get() as usize),
+		)?;
 
 		let account = Runtime::AddressMapping::into_account_id(account.into());
 
@@ -323,7 +337,8 @@ where
 	#[precompile::public("prime()")]
 	#[precompile::view]
 	fn prime(handle: &mut impl PrecompileHandle) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Prime
+		handle.record_db_read::<Runtime>(20)?;
 
 		let prime = pallet_collective::Pallet::<Runtime, Instance>::prime()
 			.map(|prime| prime.into())

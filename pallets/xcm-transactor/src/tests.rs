@@ -19,6 +19,7 @@ use crate::*;
 use cumulus_primitives_core::relay_chain::HrmpChannelId;
 use frame_support::dispatch::{DispatchError, Weight};
 use frame_support::{assert_noop, assert_ok, weights::constants::WEIGHT_REF_TIME_PER_SECOND};
+use sp_runtime::traits::Convert;
 use sp_std::boxed::Box;
 use xcm::latest::prelude::*;
 use xcm_primitives::{UtilityAvailableCalls, UtilityEncodeCall};
@@ -69,7 +70,8 @@ fn test_transact_through_derivative_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::UnclaimedIndex
 			);
@@ -93,7 +95,8 @@ fn test_transact_through_derivative_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::TransactorInfoNotSet
 			);
@@ -123,7 +126,8 @@ fn test_transact_through_derivative_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::FeePerSecondNotSet
 			);
@@ -157,7 +161,8 @@ fn test_transact_through_derivative_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::AssetIsNotReserveInDestination
 			);
@@ -185,7 +190,8 @@ fn test_transact_through_derivative_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 10001u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::MaxWeightTransactReached
 			);
@@ -213,7 +219,8 @@ fn test_transact_through_signed_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::TransactorInfoNotSet
 			);
@@ -242,7 +249,8 @@ fn test_transact_through_signed_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::SignedTransactNotAllowedForDestination
 			);
@@ -271,7 +279,8 @@ fn test_transact_through_signed_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::FeePerSecondNotSet
 			);
@@ -304,7 +313,8 @@ fn test_transact_through_signed_errors() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::AssetIsNotReserveInDestination
 			);
@@ -351,7 +361,8 @@ fn test_transact_through_derivative_multilocation_success() {
 				TransactWeights {
 					transact_required_weight_at_most: 100u64.into(),
 					overall_weight: None
-				}
+				},
+				false
 			));
 			let expected = vec![
 				crate::Event::RegisteredDerivative {
@@ -420,7 +431,8 @@ fn test_transact_through_derivative_success() {
 				TransactWeights {
 					transact_required_weight_at_most: 100u64.into(),
 					overall_weight: None
-				}
+				},
+				false
 			));
 			let expected = vec![
 				crate::Event::RegisteredDerivative {
@@ -448,6 +460,20 @@ fn test_transact_through_derivative_success() {
 				},
 			];
 			assert_eq!(events(), expected);
+			let sent_messages = mock::sent_xcm();
+			let (_, sent_message) = sent_messages.first().unwrap();
+
+			// Check message doesn't contain the appendix
+			assert!(!sent_message.0.contains(&SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(Junction::Parachain(100))
+					}
+				}
+			]))));
 		})
 }
 
@@ -474,7 +500,8 @@ fn test_root_can_transact_through_sovereign() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				DispatchError::BadOrigin
 			);
@@ -511,7 +538,8 @@ fn test_root_can_transact_through_sovereign() {
 				TransactWeights {
 					transact_required_weight_at_most: 100u64.into(),
 					overall_weight: None
-				}
+				},
+				false
 			));
 
 			let expected = vec![
@@ -655,7 +683,8 @@ fn test_transact_through_signed_fails_if_transact_info_not_set_at_all() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::TransactorInfoNotSet
 			);
@@ -690,7 +719,8 @@ fn test_transact_through_signed_fails_if_weight_is_not_set() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::SignedTransactNotAllowedForDestination
 			);
@@ -725,7 +755,8 @@ fn test_transact_through_signed_fails_if_weight_overflows() {
 					TransactWeights {
 						transact_required_weight_at_most: 10064u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::WeightOverflow
 			);
@@ -760,7 +791,8 @@ fn test_transact_through_signed_fails_if_weight_is_bigger_than_max_weight() {
 					TransactWeights {
 						transact_required_weight_at_most: 100000u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::MaxWeightTransactReached
 			);
@@ -795,7 +827,8 @@ fn test_transact_through_signed_fails_if_fee_per_second_not_set() {
 					TransactWeights {
 						transact_required_weight_at_most: 100u64.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				Error::<Test>::FeePerSecondNotSet
 			);
@@ -837,7 +870,8 @@ fn test_transact_through_signed_works() {
 				TransactWeights {
 					transact_required_weight_at_most: 100u64.into(),
 					overall_weight: None
-				}
+				},
+				false
 			));
 
 			let expected = vec![
@@ -893,7 +927,8 @@ fn test_send_through_derivative_with_custom_weight_and_fee() {
 				TransactWeights {
 					transact_required_weight_at_most: tx_weight,
 					overall_weight: Some(total_weight)
-				}
+				},
+				false
 			));
 			let expected = vec![
 				crate::Event::RegisteredDerivative {
@@ -964,7 +999,8 @@ fn test_send_through_sovereign_with_custom_weight_and_fee() {
 				TransactWeights {
 					transact_required_weight_at_most: tx_weight,
 					overall_weight: Some(total_weight)
-				}
+				},
+				false
 			));
 
 			let expected = vec![
@@ -1027,7 +1063,8 @@ fn test_send_through_signed_with_custom_weight_and_fee() {
 				TransactWeights {
 					transact_required_weight_at_most: tx_weight,
 					overall_weight: Some(total_weight)
-				}
+				},
+				false
 			));
 
 			let expected = vec![crate::Event::TransactedSigned {
@@ -1100,6 +1137,173 @@ fn test_hrmp_manipulator_init() {
 				require_weight_at_most: tx_weight,
 				call: vec![1u8, 0u8].into(),
 			}));
+		})
+}
+
+#[test]
+fn test_hrmp_manipulator_init_v2_convert_works() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// We are gonna use a total weight of 10_100, a tx weight of 100,
+			// and a total fee of 100
+			let total_weight: Weight = 10_100u64.into();
+			let tx_weight: Weight = 100_u64.into();
+			let total_fee = 100u128;
+
+			// Change xcm version
+			CustomVersionWrapper::set_version(2);
+
+			assert_ok!(XcmTransactor::hrmp_manage(
+				RuntimeOrigin::root(),
+				HrmpOperation::InitOpen(HrmpInitParams {
+					para_id: 1u32.into(),
+					proposed_max_capacity: 1,
+					proposed_max_message_size: 1
+				}),
+				CurrencyPayment {
+					currency: Currency::AsMultiLocation(Box::new(xcm::VersionedMultiLocation::V3(
+						MultiLocation::parent()
+					))),
+					fee_amount: Some(total_fee)
+				},
+				TransactWeights {
+					transact_required_weight_at_most: tx_weight,
+					overall_weight: Some(total_weight)
+				}
+			));
+
+			let sent_messages = mock::sent_xcm();
+			let (_, sent_message) = sent_messages.first().unwrap();
+			// Lets make sure the message is as expected
+			assert!(sent_message
+				.0
+				.contains(&WithdrawAsset((MultiLocation::here(), total_fee).into())));
+			assert!(sent_message.0.contains(&BuyExecution {
+				fees: (MultiLocation::here(), total_fee).into(),
+				weight_limit: Limited(total_weight),
+			}));
+			assert!(sent_message.0.contains(&Transact {
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: tx_weight,
+				call: vec![1u8, 0u8].into(),
+			}));
+
+			// Check message contains the new appendix
+			assert!(sent_message.0.contains(&SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(Junction::Parachain(100))
+					}
+				}
+			]))));
+		})
+}
+
+#[test]
+fn test_hrmp_manipulator_init_v3_convert_works() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// We are gonna use a total weight of 10_100, a tx weight of 100,
+			// and a total fee of 100
+			let total_weight: Weight = 10_100u64.into();
+			let tx_weight: Weight = 100_u64.into();
+			let total_fee = 100u128;
+
+			// Change xcm version
+			CustomVersionWrapper::set_version(3);
+
+			assert_ok!(XcmTransactor::hrmp_manage(
+				RuntimeOrigin::root(),
+				HrmpOperation::InitOpen(HrmpInitParams {
+					para_id: 1u32.into(),
+					proposed_max_capacity: 1,
+					proposed_max_message_size: 1
+				}),
+				CurrencyPayment {
+					currency: Currency::AsMultiLocation(Box::new(xcm::VersionedMultiLocation::V3(
+						MultiLocation::parent()
+					))),
+					fee_amount: Some(total_fee)
+				},
+				TransactWeights {
+					transact_required_weight_at_most: tx_weight,
+					overall_weight: Some(total_weight)
+				}
+			));
+
+			let sent_messages = mock::sent_xcm();
+			let (_, sent_message) = sent_messages.first().unwrap();
+			// Lets make sure the message is as expected
+			assert!(sent_message
+				.0
+				.contains(&WithdrawAsset((MultiLocation::here(), total_fee).into())));
+			assert!(sent_message.0.contains(&BuyExecution {
+				fees: (MultiLocation::here(), total_fee).into(),
+				weight_limit: Limited(total_weight),
+			}));
+			assert!(sent_message.0.contains(&Transact {
+				origin_kind: OriginKind::Native,
+				require_weight_at_most: tx_weight,
+				call: vec![1u8, 0u8].into(),
+			}));
+
+			// Check message contains the new appendix
+			assert!(sent_message.0.contains(&SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(Junction::Parachain(100))
+					}
+				}
+			]))));
+		})
+}
+
+#[test]
+fn test_hrmp_manipulator_init_v4_convert_fails() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// We are gonna use a total weight of 10_100, a tx weight of 100,
+			// and a total fee of 100
+			let total_weight: Weight = 10_100u64.into();
+			let tx_weight: Weight = 100_u64.into();
+			let total_fee = 100u128;
+
+			// Change xcm version
+			CustomVersionWrapper::set_version(4);
+
+			assert_noop!(
+				XcmTransactor::hrmp_manage(
+					RuntimeOrigin::root(),
+					HrmpOperation::InitOpen(HrmpInitParams {
+						para_id: 1u32.into(),
+						proposed_max_capacity: 1,
+						proposed_max_message_size: 1
+					}),
+					CurrencyPayment {
+						currency: Currency::AsMultiLocation(Box::new(
+							xcm::VersionedMultiLocation::V3(MultiLocation::parent())
+						)),
+						fee_amount: Some(total_fee)
+					},
+					TransactWeights {
+						transact_required_weight_at_most: tx_weight,
+						overall_weight: Some(total_weight)
+					}
+				),
+				Error::<Test>::ErrorValidating
+			);
 		})
 }
 
@@ -1286,83 +1490,197 @@ fn test_hrmp_manipulator_close() {
 }
 
 #[test]
-fn xcm_v2_to_v3_transact_info_with_weight_limit_works() {
-	ExtBuilder::default().build().execute_with(|| {
-		use frame_support::{migration::put_storage_value, Blake2_128Concat, StorageHasher};
-		let pallet_prefix: &[u8] = b"XcmTransactor";
-		let storage_item_prefix: &[u8] = b"TransactInfoWithWeightLimit";
-		use frame_support::traits::OnRuntimeUpgrade;
-		use parity_scale_codec::Encode;
+fn test_transact_through_derivative_with_refund_works() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// Root can register
+			assert_ok!(XcmTransactor::register(RuntimeOrigin::root(), 1u64, 1));
 
-		let para_id = mock::ParachainId::get();
+			// Root can set transact info
+			assert_ok!(XcmTransactor::set_transact_info(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				0.into(),
+				10000.into(),
+				None
+			));
 
-		let old_multilocation = xcm::v2::MultiLocation {
-			parents: 1,
-			interior: xcm::v2::Junctions::X2(
-				xcm::v2::Junction::Parachain(para_id.into()),
-				xcm::v2::Junction::GeneralIndex(1),
-			),
-		};
+			// Set fee per second
+			assert_ok!(XcmTransactor::set_fee_per_second(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				1
+			));
 
-		let old_value = crate::migrations::OldRemoteTransactInfoWithMaxWeight {
-			transact_extra_weight: 10u64,
-			max_weight: 10u64,
-			transact_extra_weight_signed: Some(10u64),
-		};
+			// fee as destination are the same, this time it should work
+			assert_ok!(XcmTransactor::transact_through_derivative(
+				RuntimeOrigin::signed(1u64),
+				Transactors::Relay,
+				1,
+				CurrencyPayment {
+					currency: Currency::AsCurrencyId(CurrencyId::OtherReserve(0)),
+					fee_amount: None
+				},
+				vec![1u8],
+				TransactWeights {
+					transact_required_weight_at_most: 100u64.into(),
+					overall_weight: Some(1000.into())
+				},
+				true
+			));
+			let expected = vec![
+				crate::Event::RegisteredDerivative {
+					account_id: 1u64,
+					index: 1,
+				},
+				crate::Event::TransactInfoChanged {
+					location: MultiLocation::parent(),
+					remote_info: RemoteTransactInfoWithMaxWeight {
+						transact_extra_weight: 0.into(),
+						max_weight: 10000.into(),
+						transact_extra_weight_signed: None,
+					},
+				},
+				crate::Event::DestFeePerSecondChanged {
+					location: MultiLocation::parent(),
+					fee_per_second: 1,
+				},
+				crate::Event::TransactedDerivative {
+					account_id: 1u64,
+					dest: MultiLocation::parent(),
+					call: Transactors::Relay
+						.encode_call(UtilityAvailableCalls::AsDerivative(1, vec![1u8])),
+					index: 1,
+				},
+			];
+			assert_eq!(events(), expected);
+			let sent_messages = mock::sent_xcm();
+			let (_, sent_message) = sent_messages.first().unwrap();
 
-		let expected_value: crate::RemoteTransactInfoWithMaxWeight = old_value.clone().into();
-
-		put_storage_value(
-			pallet_prefix,
-			storage_item_prefix,
-			&Blake2_128Concat::hash(&old_multilocation.encode()),
-			old_value,
-		);
-
-		crate::migrations::XcmV2ToV3XcmTransactor::<Test>::on_runtime_upgrade();
-
-		let new_expected_multilocation: MultiLocation = old_multilocation
-			.try_into()
-			.expect("convert xcm v2 into v3");
-		let new_value: crate::RemoteTransactInfoWithMaxWeight =
-			XcmTransactor::transact_info(new_expected_multilocation).expect("migrated to xcm v3");
-		assert!(new_value == expected_value);
-	});
+			// Check message contains the new appendix
+			assert!(sent_message.0.contains(&SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(Junction::Parachain(100))
+					}
+				}
+			]))));
+		})
 }
 
 #[test]
-fn xcm_v2_to_v3_destination_asset_fee_per_second_works() {
-	ExtBuilder::default().build().execute_with(|| {
-		use frame_support::{migration::put_storage_value, StorageHasher, Twox64Concat};
-		let pallet_prefix: &[u8] = b"XcmTransactor";
-		let storage_item_prefix: &[u8] = b"DestinationAssetFeePerSecond";
-		use frame_support::traits::OnRuntimeUpgrade;
-		use parity_scale_codec::Encode;
+fn test_transact_through_derivative_with_refund_fails_overall_weight_not_set() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// Root can register
+			assert_ok!(XcmTransactor::register(RuntimeOrigin::root(), 1u64, 1));
 
-		let para_id = mock::ParachainId::get();
+			// Root can set transact info
+			assert_ok!(XcmTransactor::set_transact_info(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				0.into(),
+				10000.into(),
+				None
+			));
 
-		let old_multilocation = xcm::v2::MultiLocation {
-			parents: 1,
-			interior: xcm::v2::Junctions::X2(
-				xcm::v2::Junction::Parachain(para_id.into()),
-				xcm::v2::Junction::GeneralIndex(1),
-			),
-		};
+			// Set fee per second
+			assert_ok!(XcmTransactor::set_fee_per_second(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				1
+			));
 
-		put_storage_value(
-			pallet_prefix,
-			storage_item_prefix,
-			&Twox64Concat::hash(&old_multilocation.encode()),
-			7u128,
-		);
+			// fee as destination are the same, this time it should work
+			assert_noop!(
+				XcmTransactor::transact_through_derivative(
+					RuntimeOrigin::signed(1u64),
+					Transactors::Relay,
+					1,
+					CurrencyPayment {
+						currency: Currency::AsCurrencyId(CurrencyId::OtherReserve(0)),
+						fee_amount: None
+					},
+					vec![1u8],
+					TransactWeights {
+						transact_required_weight_at_most: 100u64.into(),
+						overall_weight: None
+					},
+					true
+				),
+				Error::<Test>::RefundNotSupportedWithTransactInfo
+			);
+		})
+}
 
-		crate::migrations::XcmV2ToV3XcmTransactor::<Test>::on_runtime_upgrade();
+#[test]
+fn test_transact_through_signed_with_refund_works() {
+	ExtBuilder::default()
+		.with_balances(vec![])
+		.build()
+		.execute_with(|| {
+			// Set fee per second
+			assert_ok!(XcmTransactor::set_fee_per_second(
+				RuntimeOrigin::root(),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				1
+			));
 
-		let new_expected_multilocation: MultiLocation = old_multilocation
-			.try_into()
-			.expect("convert xcm v2 into v3");
-		let new_value: u128 = XcmTransactor::dest_asset_fee_per_second(new_expected_multilocation)
-			.expect("migrated to xcm v3");
-		assert!(new_value == 7u128);
-	});
+			// Overall weight to use
+			let total_weight: Weight = 10_100u64.into();
+			assert_ok!(XcmTransactor::transact_through_signed(
+				RuntimeOrigin::signed(1u64),
+				Box::new(xcm::VersionedMultiLocation::V3(MultiLocation::parent())),
+				CurrencyPayment {
+					currency: Currency::AsCurrencyId(CurrencyId::OtherReserve(0)),
+					fee_amount: None
+				},
+				vec![1u8],
+				TransactWeights {
+					transact_required_weight_at_most: 100u64.into(),
+					overall_weight: Some(total_weight)
+				},
+				true
+			));
+
+			let expected = vec![
+				crate::Event::DestFeePerSecondChanged {
+					location: MultiLocation::parent(),
+					fee_per_second: 1,
+				},
+				crate::Event::TransactedSigned {
+					fee_payer: 1u64,
+					dest: MultiLocation::parent(),
+					call: vec![1u8],
+				},
+			];
+			assert_eq!(events(), expected);
+			let sent_messages = mock::sent_xcm();
+			let (_, sent_message) = sent_messages.first().unwrap();
+
+			// Check message contains the new appendix
+			assert!(sent_message.0.contains(&SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X2(
+							Junction::Parachain(100),
+							AccountIdToMultiLocation::convert(1)
+								.interior
+								.take_first()
+								.unwrap()
+						)
+					}
+				}
+			]))));
+		})
 }

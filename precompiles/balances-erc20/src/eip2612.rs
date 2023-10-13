@@ -45,18 +45,16 @@ where
 {
 	pub fn compute_domain_separator(address: H160) -> [u8; 32] {
 		let name: H256 = keccak_256(Metadata::name().as_bytes()).into();
-
 		let version: H256 = keccak256!("1").into();
-
 		let chain_id: U256 = Runtime::ChainId::get().into();
 
-		let domain_separator_inner = EvmDataWriter::new()
-			.write(H256::from(PERMIT_DOMAIN))
-			.write(name)
-			.write(version)
-			.write(chain_id)
-			.write(Address(address))
-			.build();
+		let domain_separator_inner = solidity::encode_arguments((
+			H256::from(PERMIT_DOMAIN),
+			name,
+			version,
+			chain_id,
+			Address(address),
+		));
 
 		keccak_256(&domain_separator_inner).into()
 	}
@@ -71,14 +69,14 @@ where
 	) -> [u8; 32] {
 		let domain_separator = Self::compute_domain_separator(address);
 
-		let permit_content = EvmDataWriter::new()
-			.write(H256::from(PERMIT_TYPEHASH))
-			.write(Address(owner))
-			.write(Address(spender))
-			.write(value)
-			.write(nonce)
-			.write(deadline)
-			.build();
+		let permit_content = solidity::encode_arguments((
+			H256::from(PERMIT_TYPEHASH),
+			Address(owner),
+			Address(spender),
+			value,
+			nonce,
+			deadline,
+		));
 		let permit_content = keccak_256(&permit_content);
 
 		let mut pre_digest = Vec::with_capacity(2 + 32 + 32);
@@ -100,7 +98,8 @@ where
 		r: H256,
 		s: H256,
 	) -> EvmResult {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// NoncesStorage: Blake2_128(16) + contract(20) + Blake2_128(16) + owner(20) + nonce(32)
+		handle.record_db_read::<Runtime>(104)?;
 
 		let owner: H160 = owner.into();
 		let spender: H160 = spender.into();
@@ -152,7 +151,7 @@ where
 			SELECTOR_LOG_APPROVAL,
 			owner,
 			spender,
-			EvmDataWriter::new().write(value).build(),
+			solidity::encode_event_data(value),
 		)
 		.record(handle)?;
 
@@ -160,7 +159,8 @@ where
 	}
 
 	pub(crate) fn nonces(handle: &mut impl PrecompileHandle, owner: Address) -> EvmResult<U256> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// NoncesStorage: Blake2_128(16) + contract(20) + Blake2_128(16) + owner(20) + nonce(32)
+		handle.record_db_read::<Runtime>(104)?;
 
 		let owner: H160 = owner.into();
 
@@ -168,7 +168,8 @@ where
 	}
 
 	pub(crate) fn domain_separator(handle: &mut impl PrecompileHandle) -> EvmResult<H256> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// ChainId
+		handle.record_db_read::<Runtime>(8)?;
 
 		Ok(Self::compute_domain_separator(handle.context().address).into())
 	}

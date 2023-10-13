@@ -69,14 +69,14 @@ where
 		let event = log1(
 			handle.context().address,
 			SELECTOR_LOG_PREIMAGE_NOTED,
-			EvmDataWriter::new().write::<H256>(hash.into()).build(),
+			solidity::encode_arguments(H256::from(hash)),
 		);
 		handle.record_log_costs(&[&event])?;
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = PreimageCall::<Runtime>::note_preimage { bytes }.into();
 
-		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call)?;
+		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 		Ok(hash)
@@ -91,7 +91,7 @@ where
 		let event = log1(
 			handle.context().address,
 			SELECTOR_LOG_PREIMAGE_UNNOTED,
-			EvmDataWriter::new().write::<H256>(hash).build(),
+			solidity::encode_arguments(H256::from(hash)),
 		);
 		handle.record_log_costs(&[&event])?;
 
@@ -102,7 +102,7 @@ where
 
 		let call = PreimageCall::<Runtime>::unnote_preimage { hash }.into();
 
-		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call)?;
+		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 

@@ -18,6 +18,7 @@ import type {
   I32,
   I64,
   I8,
+  ISize,
   Json,
   Null,
   OptionBool,
@@ -40,6 +41,7 @@ import type {
   i32,
   i64,
   i8,
+  isize,
   u128,
   u16,
   u256,
@@ -228,6 +230,7 @@ import type {
   ContractConstructorSpecV1,
   ContractConstructorSpecV2,
   ContractConstructorSpecV3,
+  ContractConstructorSpecV4,
   ContractContractSpecV0,
   ContractContractSpecV1,
   ContractContractSpecV2,
@@ -236,6 +239,7 @@ import type {
   ContractCryptoHasher,
   ContractDiscriminant,
   ContractDisplayName,
+  ContractEnvironmentV4,
   ContractEventParamSpecLatest,
   ContractEventParamSpecV0,
   ContractEventParamSpecV2,
@@ -258,6 +262,7 @@ import type {
   ContractMessageSpecV0,
   ContractMessageSpecV1,
   ContractMessageSpecV2,
+  ContractMessageSpecV3,
   ContractMetadata,
   ContractMetadataLatest,
   ContractMetadataV0,
@@ -406,6 +411,7 @@ import type {
   SignerPayload,
   Sr25519Signature,
 } from "@polkadot/types/interfaces/extrinsics";
+import type { FungiblesAccessError } from "@polkadot/types/interfaces/fungibles";
 import type {
   AssetOptions,
   Owner,
@@ -516,6 +522,7 @@ import type {
   MetadataV12,
   MetadataV13,
   MetadataV14,
+  MetadataV15,
   MetadataV9,
   ModuleConstantMetadataV10,
   ModuleConstantMetadataV11,
@@ -538,10 +545,15 @@ import type {
   PalletEventMetadataV14,
   PalletMetadataLatest,
   PalletMetadataV14,
+  PalletMetadataV15,
   PalletStorageMetadataLatest,
   PalletStorageMetadataV14,
   PortableType,
   PortableTypeV14,
+  RuntimeApiMetadataLatest,
+  RuntimeApiMetadataV15,
+  RuntimeApiMethodMetadataV15,
+  RuntimeApiMethodParamMetadataV15,
   SignedExtensionMetadataLatest,
   SignedExtensionMetadataV14,
   StorageEntryMetadataLatest,
@@ -582,6 +594,7 @@ import type {
   MmrBatchProof,
   MmrEncodableOpaqueLeaf,
   MmrError,
+  MmrHash,
   MmrLeafBatchProof,
   MmrLeafIndex,
   MmrLeafProof,
@@ -635,6 +648,9 @@ import type {
   DisputeStatementSet,
   DoubleVoteReport,
   DownwardMessage,
+  ExecutorParam,
+  ExecutorParams,
+  ExecutorParamsHash,
   ExplicitDisputeStatement,
   GlobalValidationData,
   GlobalValidationSchedule,
@@ -681,6 +697,8 @@ import type {
   ParathreadEntry,
   PersistedValidationData,
   PvfCheckStatement,
+  PvfExecTimeoutKind,
+  PvfPrepTimeoutKind,
   QueuedParathread,
   RegisteredParachainInfo,
   RelayBlockNumber,
@@ -1386,6 +1404,7 @@ declare module "@polkadot/types/types/registry" {
     ContractConstructorSpecV1: ContractConstructorSpecV1;
     ContractConstructorSpecV2: ContractConstructorSpecV2;
     ContractConstructorSpecV3: ContractConstructorSpecV3;
+    ContractConstructorSpecV4: ContractConstructorSpecV4;
     ContractContractSpecV0: ContractContractSpecV0;
     ContractContractSpecV1: ContractContractSpecV1;
     ContractContractSpecV2: ContractContractSpecV2;
@@ -1394,6 +1413,7 @@ declare module "@polkadot/types/types/registry" {
     ContractCryptoHasher: ContractCryptoHasher;
     ContractDiscriminant: ContractDiscriminant;
     ContractDisplayName: ContractDisplayName;
+    ContractEnvironmentV4: ContractEnvironmentV4;
     ContractEventParamSpecLatest: ContractEventParamSpecLatest;
     ContractEventParamSpecV0: ContractEventParamSpecV0;
     ContractEventParamSpecV2: ContractEventParamSpecV2;
@@ -1430,6 +1450,7 @@ declare module "@polkadot/types/types/registry" {
     ContractMessageSpecV0: ContractMessageSpecV0;
     ContractMessageSpecV1: ContractMessageSpecV1;
     ContractMessageSpecV2: ContractMessageSpecV2;
+    ContractMessageSpecV3: ContractMessageSpecV3;
     ContractMetadata: ContractMetadata;
     ContractMetadataLatest: ContractMetadataLatest;
     ContractMetadataV0: ContractMetadataV0;
@@ -1575,6 +1596,9 @@ declare module "@polkadot/types/types/registry" {
     EvmLog: EvmLog;
     EvmVicinity: EvmVicinity;
     ExecReturnValue: ExecReturnValue;
+    ExecutorParam: ExecutorParam;
+    ExecutorParams: ExecutorParams;
+    ExecutorParamsHash: ExecutorParamsHash;
     ExitError: ExitError;
     ExitFatal: ExitFatal;
     ExitReason: ExitReason;
@@ -1635,6 +1659,7 @@ declare module "@polkadot/types/types/registry" {
     FungibilityV0: FungibilityV0;
     FungibilityV1: FungibilityV1;
     FungibilityV2: FungibilityV2;
+    FungiblesAccessError: FungiblesAccessError;
     Gas: Gas;
     GiltBid: GiltBid;
     GlobalValidationData: GlobalValidationData;
@@ -1722,6 +1747,8 @@ declare module "@polkadot/types/types/registry" {
     InteriorMultiLocation: InteriorMultiLocation;
     InvalidDisputeStatementKind: InvalidDisputeStatementKind;
     InvalidTransaction: InvalidTransaction;
+    isize: isize;
+    ISize: ISize;
     Json: Json;
     Junction: Junction;
     Junctions: Junctions;
@@ -1775,11 +1802,13 @@ declare module "@polkadot/types/types/registry" {
     MetadataV12: MetadataV12;
     MetadataV13: MetadataV13;
     MetadataV14: MetadataV14;
+    MetadataV15: MetadataV15;
     MetadataV9: MetadataV9;
     MigrationStatusResult: MigrationStatusResult;
     MmrBatchProof: MmrBatchProof;
     MmrEncodableOpaqueLeaf: MmrEncodableOpaqueLeaf;
     MmrError: MmrError;
+    MmrHash: MmrHash;
     MmrLeafBatchProof: MmrLeafBatchProof;
     MmrLeafIndex: MmrLeafIndex;
     MmrLeafProof: MmrLeafProof;
@@ -1885,6 +1914,7 @@ declare module "@polkadot/types/types/registry" {
     PalletId: PalletId;
     PalletMetadataLatest: PalletMetadataLatest;
     PalletMetadataV14: PalletMetadataV14;
+    PalletMetadataV15: PalletMetadataV15;
     PalletsOrigin: PalletsOrigin;
     PalletStorageMetadataLatest: PalletStorageMetadataLatest;
     PalletStorageMetadataV14: PalletStorageMetadataV14;
@@ -1950,6 +1980,8 @@ declare module "@polkadot/types/types/registry" {
     ProxyState: ProxyState;
     ProxyType: ProxyType;
     PvfCheckStatement: PvfCheckStatement;
+    PvfExecTimeoutKind: PvfExecTimeoutKind;
+    PvfPrepTimeoutKind: PvfPrepTimeoutKind;
     QueryId: QueryId;
     QueryStatus: QueryStatus;
     QueueConfigData: QueueConfigData;
@@ -2015,6 +2047,10 @@ declare module "@polkadot/types/types/registry" {
     RoundSnapshot: RoundSnapshot;
     RoundState: RoundState;
     RpcMethods: RpcMethods;
+    RuntimeApiMetadataLatest: RuntimeApiMetadataLatest;
+    RuntimeApiMetadataV15: RuntimeApiMetadataV15;
+    RuntimeApiMethodMetadataV15: RuntimeApiMethodMetadataV15;
+    RuntimeApiMethodParamMetadataV15: RuntimeApiMethodParamMetadataV15;
     RuntimeCall: RuntimeCall;
     RuntimeDbWeight: RuntimeDbWeight;
     RuntimeDispatchInfo: RuntimeDispatchInfo;

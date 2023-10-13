@@ -21,7 +21,7 @@
 mod common;
 use common::*;
 
-use fp_evm::Context;
+use fp_evm::{Context, IsPrecompileResult};
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::{DispatchClass, Dispatchable},
@@ -32,16 +32,17 @@ use frame_support::{
 	weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
 	StorageHasher, Twox128,
 };
-
 use moonbeam_runtime::{
 	asset_config::LocalAssetInstance,
 	currency::GLMR,
-	xcm_config::{CurrencyId, SelfReserve, UnitWeightCost},
-	AccountId, Balances, CouncilCollective, CrowdloanRewards, ParachainStaking, PolkadotXcm,
-	Precompiles, Runtime, RuntimeBlockWeights, RuntimeCall, RuntimeEvent, System,
-	TechCommitteeCollective, TransactionPayment, TreasuryCouncilCollective, XTokens, XcmTransactor,
-	FOREIGN_ASSET_PRECOMPILE_ADDRESS_PREFIX, LOCAL_ASSET_PRECOMPILE_ADDRESS_PREFIX,
+	xcm_config::{CurrencyId, SelfReserve},
+	AccountId, Balances, CouncilCollective, CrowdloanRewards, OpenTechCommitteeCollective,
+	ParachainStaking, PolkadotXcm, Precompiles, Runtime, RuntimeBlockWeights, RuntimeCall,
+	RuntimeEvent, System, TechCommitteeCollective, TransactionPayment, TreasuryCouncilCollective,
+	XTokens, XcmTransactor, FOREIGN_ASSET_PRECOMPILE_ADDRESS_PREFIX,
+	LOCAL_ASSET_PRECOMPILE_ADDRESS_PREFIX,
 };
+use moonbeam_xcm_benchmarks::weights::XcmWeight;
 use nimbus_primitives::NimbusId;
 use pallet_evm::PrecompileSet;
 use pallet_evm_precompileset_assets_erc20::{
@@ -51,7 +52,11 @@ use pallet_transaction_payment::Multiplier;
 use pallet_xcm_transactor::{Currency, CurrencyPayment, TransactWeights};
 use parity_scale_codec::Encode;
 use polkadot_parachain::primitives::Sibling;
-use precompile_utils::{precompile_set::IsActivePrecompile, prelude::*, testing::*};
+use precompile_utils::{
+	precompile_set::{is_precompile_or_fail, IsActivePrecompile},
+	prelude::*,
+	testing::*,
+};
 use sha3::{Digest, Keccak256};
 use sp_core::{ByteArray, Pair, H160, U256};
 use sp_runtime::{traits::Convert, DispatchError, ModuleError, TokenError};
@@ -126,6 +131,9 @@ fn verify_pallet_prefixes() {
 	is_pallet_prefix::<moonbeam_runtime::Democracy>("Democracy");
 	is_pallet_prefix::<moonbeam_runtime::CouncilCollective>("CouncilCollective");
 	is_pallet_prefix::<moonbeam_runtime::TechCommitteeCollective>("TechCommitteeCollective");
+	is_pallet_prefix::<moonbeam_runtime::OpenTechCommitteeCollective>(
+		"OpenTechCommitteeCollective",
+	);
 	is_pallet_prefix::<moonbeam_runtime::Treasury>("Treasury");
 	is_pallet_prefix::<moonbeam_runtime::AuthorInherent>("AuthorInherent");
 	is_pallet_prefix::<moonbeam_runtime::AuthorFilter>("AuthorFilter");
@@ -209,6 +217,20 @@ fn verify_pallet_prefixes() {
 				max_values: None,
 				max_size: Some(1037),
 			},
+			StorageInfo {
+				pallet_name: b"Balances".to_vec(),
+				storage_name: b"Holds".to_vec(),
+				prefix: prefix(b"Balances", b"Holds"),
+				max_values: None,
+				max_size: Some(37),
+			},
+			StorageInfo {
+				pallet_name: b"Balances".to_vec(),
+				storage_name: b"Freezes".to_vec(),
+				prefix: prefix(b"Balances", b"Freezes"),
+				max_values: None,
+				max_size: Some(37),
+			},
 		]
 	);
 	assert_eq!(
@@ -261,6 +283,12 @@ fn test_collectives_storage_item_prefixes() {
 	{
 		assert_eq!(pallet_name, b"TreasuryCouncilCollective".to_vec());
 	}
+
+	for StorageInfo { pallet_name, .. } in
+		<moonbeam_runtime::OpenTechCommitteeCollective as StorageInfoTrait>::storage_info()
+	{
+		assert_eq!(pallet_name, b"OpenTechCommitteeCollective".to_vec());
+	}
 }
 
 #[test]
@@ -287,6 +315,96 @@ fn collective_set_members_root_origin_works() {
 			Some(AccountId::from(ALICE)),
 			2
 		));
+		// OpenTechCommitteeCollective
+		assert_ok!(OpenTechCommitteeCollective::set_members(
+			<Runtime as frame_system::Config>::RuntimeOrigin::root(),
+			vec![AccountId::from(ALICE), AccountId::from(BOB)],
+			Some(AccountId::from(ALICE)),
+			2
+		));
+	});
+}
+
+#[test]
+fn collective_set_members_general_admin_origin_works() {
+	use moonbeam_runtime::{
+		governance::custom_origins::Origin as CustomOrigin, OriginCaller, Utility,
+	};
+
+	ExtBuilder::default().build().execute_with(|| {
+		let root_caller = <Runtime as frame_system::Config>::RuntimeOrigin::root();
+		let alice = AccountId::from(ALICE);
+
+		// CouncilCollective
+		let _ = Utility::dispatch_as(
+			root_caller.clone(),
+			Box::new(OriginCaller::Origins(CustomOrigin::GeneralAdmin)),
+			Box::new(
+				pallet_collective::Call::<Runtime, pallet_collective::Instance1>::set_members {
+					new_members: vec![alice, AccountId::from(BOB)],
+					prime: Some(alice),
+					old_count: 2,
+				}
+				.into(),
+			),
+		);
+		// TechCommitteeCollective
+		let _ = Utility::dispatch_as(
+			root_caller.clone(),
+			Box::new(OriginCaller::Origins(CustomOrigin::GeneralAdmin)),
+			Box::new(
+				pallet_collective::Call::<Runtime, pallet_collective::Instance2>::set_members {
+					new_members: vec![alice, AccountId::from(BOB)],
+					prime: Some(alice),
+					old_count: 2,
+				}
+				.into(),
+			),
+		);
+		// TreasuryCouncilCollective
+		let _ = Utility::dispatch_as(
+			root_caller.clone(),
+			Box::new(OriginCaller::Origins(CustomOrigin::GeneralAdmin)),
+			Box::new(
+				pallet_collective::Call::<Runtime, pallet_collective::Instance3>::set_members {
+					new_members: vec![alice, AccountId::from(BOB)],
+					prime: Some(alice),
+					old_count: 2,
+				}
+				.into(),
+			),
+		);
+		// OpenTechCommitteeCollective
+		let _ = Utility::dispatch_as(
+			root_caller,
+			Box::new(OriginCaller::Origins(CustomOrigin::GeneralAdmin)),
+			Box::new(
+				pallet_collective::Call::<Runtime, pallet_collective::Instance4>::set_members {
+					new_members: vec![alice, AccountId::from(BOB)],
+					prime: Some(alice),
+					old_count: 2,
+				}
+				.into(),
+			),
+		);
+
+		assert_eq!(
+			System::events()
+				.into_iter()
+				.filter_map(|r| {
+					match r.event {
+						RuntimeEvent::Utility(pallet_utility::Event::DispatchedAs { result })
+							if result.is_ok() =>
+						{
+							Some(true)
+						}
+						_ => None,
+					}
+				})
+				.collect::<Vec<_>>()
+				.len(),
+			4
+		)
 	});
 }
 
@@ -312,6 +430,14 @@ fn collective_set_members_signed_origin_does_not_work() {
 		.is_err());
 		// TreasuryCouncilCollective
 		assert!(TreasuryCouncilCollective::set_members(
+			<Runtime as frame_system::Config>::RuntimeOrigin::signed(alice),
+			vec![AccountId::from(ALICE), AccountId::from(BOB)],
+			Some(AccountId::from(ALICE)),
+			2
+		)
+		.is_err());
+		// OpenTechCommitteeCollective
+		assert!(OpenTechCommitteeCollective::set_members(
 			<Runtime as frame_system::Config>::RuntimeOrigin::signed(alice),
 			vec![AccountId::from(ALICE), AccountId::from(BOB)],
 			Some(AccountId::from(ALICE)),
@@ -362,6 +488,7 @@ fn verify_pallet_indices() {
 	is_pallet_index::<moonbeam_runtime::CouncilCollective>(70);
 	is_pallet_index::<moonbeam_runtime::TechCommitteeCollective>(71);
 	is_pallet_index::<moonbeam_runtime::TreasuryCouncilCollective>(72);
+	is_pallet_index::<moonbeam_runtime::OpenTechCommitteeCollective>(73);
 	// Treasury
 	is_pallet_index::<moonbeam_runtime::Treasury>(80);
 	// Crowdloan
@@ -563,7 +690,7 @@ fn reward_block_authors() {
 			// no rewards doled out yet
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(ALICE)),
-				8_000_000 * GLMR,
+				8_010_000 * GLMR,
 			);
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(BOB)),
@@ -573,7 +700,7 @@ fn reward_block_authors() {
 			// rewards minted and distributed
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(ALICE)),
-				8980978048702400000000000,
+				8990978048702400000000000,
 			);
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(BOB)),
@@ -614,7 +741,7 @@ fn reward_block_authors_with_parachain_bond_reserved() {
 			// no rewards doled out yet
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(ALICE)),
-				8_000_000 * GLMR,
+				8_010_000 * GLMR,
 			);
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(BOB)),
@@ -628,7 +755,7 @@ fn reward_block_authors_with_parachain_bond_reserved() {
 			// rewards minted and distributed
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(ALICE)),
-				8688492682878000000000000,
+				8698492682878000000000000,
 			);
 			assert_eq!(
 				Balances::usable_balance(AccountId::from(BOB)),
@@ -1022,7 +1149,7 @@ fn is_contributor_via_precompile() {
 				)
 				.expect_cost(1000)
 				.expect_no_logs()
-				.execute_returns_encoded(false);
+				.execute_returns(false);
 
 			// Assert precompile reports Charlie is a nominator
 			Precompiles::new()
@@ -1035,7 +1162,7 @@ fn is_contributor_via_precompile() {
 				)
 				.expect_cost(1000)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		})
 }
 
@@ -1107,12 +1234,7 @@ fn reward_info_via_precompile() {
 				)
 				.expect_cost(1000)
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write(expected_total)
-						.write(expected_claimed)
-						.build(),
-				);
+				.execute_returns((expected_total, expected_claimed));
 		})
 }
 
@@ -1303,7 +1425,7 @@ fn initial_gas_fee_is_correct() {
 			TransactionPaymentAsGasPrice::min_gas_price(),
 			(
 				125_000_000_000u128.into(),
-				Weight::from_ref_time(25_000_000u64)
+				Weight::from_parts(25_000_000u64, 0)
 			)
 		);
 	});
@@ -1325,7 +1447,7 @@ fn min_gas_fee_is_correct() {
 			TransactionPaymentAsGasPrice::min_gas_price(),
 			(
 				125_000_000_000u128.into(),
-				Weight::from_ref_time(25_000_000u64)
+				Weight::from_parts(25_000_000u64, 0)
 			)
 		);
 	});
@@ -1650,9 +1772,9 @@ fn asset_erc20_precompiles_supply_and_balance() {
 					asset_precompile_address,
 					LocalAssetsPCall::total_supply {},
 				)
-				.expect_cost(1000)
+				.expect_cost(3000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000 * GLMR));
+				.execute_returns(U256::from(1000 * GLMR));
 
 			// Access balanceOf through precompile
 			Precompiles::new()
@@ -1663,9 +1785,9 @@ fn asset_erc20_precompiles_supply_and_balance() {
 						who: Address(ALICE.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(3000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000 * GLMR));
+				.execute_returns(U256::from(1000 * GLMR));
 		});
 }
 
@@ -1696,15 +1818,15 @@ fn asset_erc20_precompiles_transfer() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(23497)
+				.expect_cost(24792)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::from(ALICE),
 					H160::from(BOB),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Make sure BOB has 400 GLMR
 			Precompiles::new()
@@ -1715,9 +1837,9 @@ fn asset_erc20_precompiles_transfer() {
 						who: Address(BOB.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(3000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400 * GLMR));
+				.execute_returns(U256::from(400 * GLMR));
 		});
 }
 
@@ -1748,15 +1870,15 @@ fn asset_erc20_precompiles_approve() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(13862)
+				.expect_cost(15219)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_APPROVAL,
 					H160::from(ALICE),
 					H160::from(BOB),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Transfer tokens from Alice to Charlie by using BOB as origin
 			Precompiles::new()
@@ -1769,15 +1891,15 @@ fn asset_erc20_precompiles_approve() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(29021)
+				.expect_cost(29997)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::from(ALICE),
 					H160::from(CHARLIE),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Make sure CHARLIE has 400 GLMR
 			Precompiles::new()
@@ -1788,9 +1910,9 @@ fn asset_erc20_precompiles_approve() {
 						who: Address(CHARLIE.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(3000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400 * GLMR));
+				.execute_returns(U256::from(400 * GLMR));
 		});
 }
 
@@ -1821,15 +1943,15 @@ fn asset_erc20_precompiles_mint_burn() {
 						value: { 1000 * GLMR }.into(),
 					},
 				)
-				.expect_cost(12787)
+				.expect_cost(14334)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::default(),
 					H160::from(BOB),
-					EvmDataWriter::new().write(U256::from(1000 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(1_000 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert the asset has been minted
 			assert_eq!(LocalAssets::total_supply(0u128), 2_000 * GLMR);
@@ -1848,15 +1970,15 @@ fn asset_erc20_precompiles_mint_burn() {
 						value: { 500 * GLMR }.into(),
 					},
 				)
-				.expect_cost(13016)
+				.expect_cost(14517)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::from(BOB),
 					H160::default(),
-					EvmDataWriter::new().write(U256::from(500 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(500 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert the asset has been burnt
 			assert_eq!(LocalAssets::total_supply(0u128), 1_500 * GLMR);
@@ -1893,13 +2015,13 @@ fn asset_erc20_precompiles_freeze_thaw_account() {
 						account: Address(ALICE.into()),
 					},
 				)
-				.expect_cost(6699)
+				.expect_cost(8464)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert account is frozen
 			assert_eq!(
-				LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1).into_result(),
+				LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1).into_result(false),
 				Err(TokenError::Frozen.into())
 			);
 
@@ -1912,13 +2034,13 @@ fn asset_erc20_precompiles_freeze_thaw_account() {
 						account: Address(ALICE.into()),
 					},
 				)
-				.expect_cost(6713)
+				.expect_cost(8465)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert account is not frozen
 			assert!(LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1)
-				.into_result()
+				.into_result(false)
 				.is_ok());
 		});
 }
@@ -1947,13 +2069,13 @@ fn asset_erc20_precompiles_freeze_thaw_asset() {
 					asset_precompile_address,
 					LocalAssetsPCall::freeze_asset {},
 				)
-				.expect_cost(5548)
+				.expect_cost(7334)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert account is frozen
 			assert_eq!(
-				LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1).into_result(),
+				LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1).into_result(false),
 				Err(TokenError::Frozen.into())
 			);
 
@@ -1964,13 +2086,13 @@ fn asset_erc20_precompiles_freeze_thaw_asset() {
 					asset_precompile_address,
 					LocalAssetsPCall::thaw_asset {},
 				)
-				.expect_cost(5550)
+				.expect_cost(7333)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Assert account is not frozen
 			assert!(LocalAssets::can_withdraw(0u128, &AccountId::from(ALICE), 1)
-				.into_result()
+				.into_result(false)
 				.is_ok());
 		});
 }
@@ -2001,9 +2123,9 @@ fn asset_erc20_precompiles_freeze_transfer_ownership() {
 						owner: Address(BOB.into()),
 					},
 				)
-				.expect_cost(6614)
+				.expect_cost(8378)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// No clear way of testing BOB is new owner, other than doing a priviledged function
 			// e.g., transfer_ownership again
@@ -2043,9 +2165,9 @@ fn asset_erc20_precompiles_freeze_set_team() {
 						issuer: Address(BOB.into()),
 					},
 				)
-				.expect_cost(5577)
+				.expect_cost(7335)
 				.expect_no_logs()
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Bob should be able to mint, freeze, and thaw
 			assert_ok!(LocalAssets::mint(
@@ -2107,9 +2229,9 @@ fn xcm_asset_erc20_precompiles_supply_and_balance() {
 					asset_precompile_address,
 					LocalAssetsPCall::total_supply {},
 				)
-				.expect_cost(1000)
+				.expect_cost(2000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000 * GLMR));
+				.execute_returns(U256::from(1000 * GLMR));
 
 			// Access balanceOf through precompile
 			Precompiles::new()
@@ -2120,9 +2242,9 @@ fn xcm_asset_erc20_precompiles_supply_and_balance() {
 						who: Address(ALICE.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(2000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000 * GLMR));
+				.execute_returns(U256::from(1000 * GLMR));
 		});
 }
 
@@ -2166,15 +2288,15 @@ fn xcm_asset_erc20_precompiles_transfer() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(23497)
+				.expect_cost(23792)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::from(ALICE),
 					H160::from(BOB),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Make sure BOB has 400 GLMR
 			Precompiles::new()
@@ -2185,9 +2307,9 @@ fn xcm_asset_erc20_precompiles_transfer() {
 						who: Address(BOB.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(2000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400 * GLMR));
+				.execute_returns(U256::from(400 * GLMR));
 		});
 }
 
@@ -2231,15 +2353,15 @@ fn xcm_asset_erc20_precompiles_approve() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(13862)
+				.expect_cost(14219)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_APPROVAL,
 					H160::from(ALICE),
 					H160::from(BOB),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Transfer tokens from Alice to Charlie by using BOB as origin
 			Precompiles::new()
@@ -2252,15 +2374,15 @@ fn xcm_asset_erc20_precompiles_approve() {
 						value: { 400 * GLMR }.into(),
 					},
 				)
-				.expect_cost(29021)
+				.expect_cost(28997)
 				.expect_log(log3(
 					asset_precompile_address,
 					SELECTOR_LOG_TRANSFER,
 					H160::from(ALICE),
 					H160::from(CHARLIE),
-					EvmDataWriter::new().write(U256::from(400 * GLMR)).build(),
+					solidity::encode_event_data(U256::from(400 * GLMR)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			// Make sure CHARLIE has 400 GLMR
 			Precompiles::new()
@@ -2271,9 +2393,9 @@ fn xcm_asset_erc20_precompiles_approve() {
 						who: Address(CHARLIE.into()),
 					},
 				)
-				.expect_cost(1000)
+				.expect_cost(2000)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400 * GLMR));
+				.execute_returns(U256::from(400 * GLMR));
 		});
 }
 
@@ -2331,9 +2453,9 @@ fn xtokens_precompile_transfer() {
 						weight: 4_000_000,
 					},
 				)
-				.expect_cost(24000)
+				.expect_cost(57639)
 				.expect_no_logs()
-				.execute_returns(vec![])
+				.execute_returns(())
 		})
 }
 
@@ -2383,9 +2505,9 @@ fn xtokens_precompile_transfer_multiasset() {
 						weight: 4_000_000,
 					},
 				)
-				.expect_cost(24000)
+				.expect_cost(57639)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		})
 }
 
@@ -2531,9 +2653,9 @@ fn transact_through_signed_precompile_works_v2() {
 						overall_weight: total_weight,
 					},
 				)
-				.expect_cost(19078)
+				.expect_cost(17185)
 				.expect_no_logs()
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
@@ -2641,7 +2763,8 @@ fn transactor_cannot_use_more_than_max_weight() {
 					TransactWeights {
 						transact_required_weight_at_most: 17001.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				pallet_xcm_transactor::Error::<Runtime>::MaxWeightTransactReached
 			);
@@ -2659,7 +2782,8 @@ fn transactor_cannot_use_more_than_max_weight() {
 					TransactWeights {
 						transact_required_weight_at_most: 17001.into(),
 						overall_weight: None
-					}
+					},
+					false
 				),
 				pallet_xcm_transactor::Error::<Runtime>::MaxWeightTransactReached
 			);
@@ -2716,7 +2840,7 @@ fn call_xtokens_with_fee() {
 }
 
 #[test]
-fn test_xcm_utils_ml_to_account() {
+fn test_xcm_utils_ml_tp_account() {
 	ExtBuilder::default().build().execute_with(|| {
 		let xcm_utils_precompile_address = H160::from_low_u64_be(2060);
 		let expected_address_parent: H160 =
@@ -2734,11 +2858,7 @@ fn test_xcm_utils_ml_to_account() {
 			)
 			.expect_cost(1000)
 			.expect_no_logs()
-			.execute_returns(
-				EvmDataWriter::new()
-					.write(Address(expected_address_parent))
-					.build(),
-			);
+			.execute_returns(Address(expected_address_parent));
 
 		let parachain_2000_multilocation = MultiLocation::new(1, X1(Parachain(2000)));
 		let expected_address_parachain: H160 =
@@ -2758,11 +2878,7 @@ fn test_xcm_utils_ml_to_account() {
 			)
 			.expect_cost(1000)
 			.expect_no_logs()
-			.execute_returns(
-				EvmDataWriter::new()
-					.write(Address(expected_address_parachain))
-					.build(),
-			);
+			.execute_returns(Address(expected_address_parachain));
 
 		let alice_in_parachain_2000_multilocation = MultiLocation::new(
 			1,
@@ -2774,8 +2890,13 @@ fn test_xcm_utils_ml_to_account() {
 				},
 			),
 		);
+		let expected_address_alice_in_parachain_2000: H160 =
+			xcm_builder::HashedDescriptionDescribeFamilyAllTerminal::<AccountId>::convert_ref(
+				alice_in_parachain_2000_multilocation.clone(),
+			)
+			.unwrap()
+			.into();
 
-		// this should fail, this convertor is not allowed in moonriver
 		Precompiles::new()
 			.prepare_test(
 				ALICE,
@@ -2786,7 +2907,7 @@ fn test_xcm_utils_ml_to_account() {
 			)
 			.expect_cost(1000)
 			.expect_no_logs()
-			.execute_reverts(|output| output == b"multilocation: Failed multilocation conversion");
+			.execute_returns(Address(expected_address_alice_in_parachain_2000));
 	});
 }
 
@@ -2794,7 +2915,8 @@ fn test_xcm_utils_ml_to_account() {
 fn test_xcm_utils_weight_message() {
 	ExtBuilder::default().build().execute_with(|| {
 		let xcm_utils_precompile_address = H160::from_low_u64_be(2060);
-		let expected_weight = UnitWeightCost::get().ref_time();
+		let expected_weight =
+			XcmWeight::<moonbeam_runtime::Runtime, RuntimeCall>::clear_origin().ref_time();
 
 		let message: Vec<u8> = xcm::VersionedXcm::<()>::V3(Xcm(vec![ClearOrigin])).encode();
 
@@ -2806,7 +2928,7 @@ fn test_xcm_utils_weight_message() {
 			.prepare_test(ALICE, xcm_utils_precompile_address, input)
 			.expect_cost(0)
 			.expect_no_logs()
-			.execute_returns(EvmDataWriter::new().write(expected_weight).build());
+			.execute_returns(expected_weight);
 	});
 }
 
@@ -2825,7 +2947,7 @@ fn test_xcm_utils_get_units_per_second() {
 			.prepare_test(ALICE, xcm_utils_precompile_address, input)
 			.expect_cost(1000)
 			.expect_no_logs()
-			.execute_returns(EvmDataWriter::new().write(expected_units).build());
+			.execute_returns(expected_units);
 	});
 }
 
@@ -2835,7 +2957,8 @@ fn precompile_existence() {
 		let precompiles = Precompiles::new();
 		let precompile_addresses: std::collections::BTreeSet<_> = vec![
 			1, 2, 3, 4, 5, 6, 7, 8, 9, 1024, 1025, 1026, 2048, 2049, 2050, 2051, 2052, 2053, 2054,
-			2055, 2056, 2057, 2058, 2059, 2060, 2061, 2062, 2063, 2064, 2067, 2069,
+			2055, 2056, 2057, 2058, 2059, 2060, 2061, 2062, 2063, 2064, 2065, 2066, 2067, 2068,
+			2069, 2070,
 		]
 		.into_iter()
 		.map(H160::from_low_u64_be)
@@ -2846,7 +2969,7 @@ fn precompile_existence() {
 
 			if precompile_addresses.contains(&address) {
 				assert!(
-					precompiles.is_precompile(address),
+					is_precompile_or_fail::<Runtime>(address, 100_000u64).expect("to be ok"),
 					"is_precompile({}) should return true",
 					i
 				);
@@ -2867,7 +2990,7 @@ fn precompile_existence() {
 				);
 			} else {
 				assert!(
-					!precompiles.is_precompile(address),
+					!is_precompile_or_fail::<Runtime>(address, 100_000u64).expect("to be ok"),
 					"is_precompile({}) should return false",
 					i
 				);
@@ -2900,20 +3023,26 @@ fn removed_precompiles() {
 		for i in 1..3000 {
 			let address = H160::from_low_u64_be(i);
 
-			if !precompiles.is_precompile(address) {
+			if !is_precompile_or_fail::<Runtime>(address, 100_000u64).expect("to be ok") {
 				continue;
 			}
 
 			if !removed_precompiles.contains(&i) {
 				assert!(
-					precompiles.is_active_precompile(address),
+					match precompiles.is_active_precompile(address, 100_000u64) {
+						IsPrecompileResult::Answer { is_precompile, .. } => is_precompile,
+						_ => false,
+					},
 					"{i} should be an active precompile"
 				);
 				continue;
 			}
 
 			assert!(
-				!precompiles.is_active_precompile(address),
+				!match precompiles.is_active_precompile(address, 100_000u64) {
+					IsPrecompileResult::Answer { is_precompile, .. } => is_precompile,
+					_ => false,
+				},
 				"{i} shouldn't be an active precompile"
 			);
 
@@ -2922,6 +3051,38 @@ fn removed_precompiles() {
 				.execute_reverts(|out| out == b"Removed precompile");
 		}
 	})
+}
+
+#[test]
+fn deal_with_fees_handles_tip() {
+	use frame_support::traits::OnUnbalanced;
+	use moonbeam_runtime::{DealWithFees, Treasury};
+	use pallet_balances::NegativeImbalance;
+
+	ExtBuilder::default()
+		.with_balances(vec![(AccountId::from(ALICE), 10_000)])
+		.build()
+		.execute_with(|| {
+			// Alice has 10_000, which makes inital supply 10_000.
+			// drop()ing the NegativeImbalance below will cause the total_supply to be decreased
+			// incorrectly (since there was never a withdraw to begin with), which in this case has
+			// the desired effect of showing that currency was burned.
+			let total_supply_before = Balances::total_issuance();
+			assert_eq!(total_supply_before, 10_000);
+
+			let fees_then_tips = vec![
+				NegativeImbalance::<moonbeam_runtime::Runtime>::new(100),
+				NegativeImbalance::<moonbeam_runtime::Runtime>::new(1_000),
+			];
+			DealWithFees::on_unbalanceds(fees_then_tips.into_iter());
+
+			// treasury should have received 20%
+			assert_eq!(Balances::free_balance(&Treasury::account_id()), 220);
+
+			// verify 80% burned
+			let total_supply_after = Balances::total_issuance();
+			assert_eq!(total_supply_before - total_supply_after, 880);
+		});
 }
 
 #[test]
@@ -3067,12 +3228,12 @@ mod fee_tests {
 		type LengthToFeeImpl = LengthToFee;
 
 		// base_fee + (multiplier * extrinsic_weight_fee) + extrinsic_length_fee + tip
-		let expected_fee = WeightToFeeImpl::weight_to_fee(&base_extrinsic)
-			+ multiplier.saturating_mul_int(WeightToFeeImpl::weight_to_fee(
-				&Weight::from_ref_time(extrinsic_weight),
-			)) + LengthToFeeImpl::weight_to_fee(&Weight::from_ref_time(
-			extrinsic_len as u64,
-		)) + tip;
+		let expected_fee =
+			WeightToFeeImpl::weight_to_fee(&base_extrinsic)
+				+ multiplier.saturating_mul_int(WeightToFeeImpl::weight_to_fee(
+					&Weight::from_parts(extrinsic_weight, 1),
+				)) + LengthToFeeImpl::weight_to_fee(&Weight::from_parts(extrinsic_len as u64, 1))
+				+ tip;
 
 		let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
 			.build_storage::<Runtime>()
@@ -3085,7 +3246,7 @@ mod fee_tests {
 				&frame_support::dispatch::DispatchInfo {
 					class: DispatchClass::Normal,
 					pays_fee: frame_support::dispatch::Pays::Yes,
-					weight: Weight::from_ref_time(extrinsic_weight),
+					weight: Weight::from_parts(extrinsic_weight, 1),
 				},
 				tip,
 			);

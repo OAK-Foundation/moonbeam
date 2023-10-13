@@ -13,6 +13,7 @@ import type {
   CumulusPalletDmpQueueEvent,
   CumulusPalletDmpQueuePageIndexData,
   CumulusPalletParachainSystemCall,
+  CumulusPalletParachainSystemCodeUpgradeAuthorization,
   CumulusPalletParachainSystemError,
   CumulusPalletParachainSystemEvent,
   CumulusPalletParachainSystemRelayStateSnapshotMessagingStateSnapshot,
@@ -66,6 +67,7 @@ import type {
   FrameSystemEvent,
   FrameSystemEventRecord,
   FrameSystemExtensionsCheckGenesis,
+  FrameSystemExtensionsCheckNonZeroSender,
   FrameSystemExtensionsCheckNonce,
   FrameSystemExtensionsCheckSpecVersion,
   FrameSystemExtensionsCheckTxVersion,
@@ -140,6 +142,7 @@ import type {
   PalletDemocracyDelegations,
   PalletDemocracyError,
   PalletDemocracyEvent,
+  PalletDemocracyMetadataOwner,
   PalletDemocracyReferendumInfo,
   PalletDemocracyReferendumStatus,
   PalletDemocracyTally,
@@ -155,6 +158,7 @@ import type {
   PalletEthereumXcmError,
   PalletEthereumXcmRawOrigin,
   PalletEvmCall,
+  PalletEvmCodeMetadata,
   PalletEvmError,
   PalletEvmEvent,
   PalletIdentityBitFlags,
@@ -177,6 +181,11 @@ import type {
   PalletMoonbeamOrbitersCurrentOrbiter,
   PalletMoonbeamOrbitersError,
   PalletMoonbeamOrbitersEvent,
+  PalletMultisigCall,
+  PalletMultisigError,
+  PalletMultisigEvent,
+  PalletMultisigMultisig,
+  PalletMultisigTimepoint,
   PalletParachainStakingAutoCompoundAutoCompoundConfig,
   PalletParachainStakingBond,
   PalletParachainStakingBondWithAutoCompound,
@@ -253,6 +262,7 @@ import type {
   PalletXcmEvent,
   PalletXcmOrigin,
   PalletXcmQueryStatus,
+  PalletXcmRemoteLockedFungibleRecord,
   PalletXcmTransactorCall,
   PalletXcmTransactorCurrency,
   PalletXcmTransactorCurrencyPayment,
@@ -297,36 +307,50 @@ import type {
   XcmPrimitivesEthereumXcmEthereumXcmTransactionV1,
   XcmPrimitivesEthereumXcmEthereumXcmTransactionV2,
   XcmPrimitivesEthereumXcmManualEthereumXcmFee,
-  XcmV0Junction,
-  XcmV0JunctionBodyId,
-  XcmV0JunctionBodyPart,
-  XcmV0JunctionNetworkId,
-  XcmV0MultiAsset,
-  XcmV0MultiLocation,
-  XcmV0Order,
-  XcmV0OriginKind,
-  XcmV0Response,
-  XcmV0Xcm,
-  XcmV1Junction,
-  XcmV1MultiAsset,
-  XcmV1MultiLocation,
-  XcmV1MultiassetAssetId,
-  XcmV1MultiassetAssetInstance,
-  XcmV1MultiassetFungibility,
-  XcmV1MultiassetMultiAssetFilter,
-  XcmV1MultiassetMultiAssets,
-  XcmV1MultiassetWildFungibility,
-  XcmV1MultiassetWildMultiAsset,
-  XcmV1MultilocationJunctions,
-  XcmV1Order,
-  XcmV1Response,
-  XcmV1Xcm,
+  XcmV2BodyId,
+  XcmV2BodyPart,
   XcmV2Instruction,
+  XcmV2Junction,
+  XcmV2MultiAsset,
+  XcmV2MultiLocation,
+  XcmV2MultiassetAssetId,
+  XcmV2MultiassetAssetInstance,
+  XcmV2MultiassetFungibility,
+  XcmV2MultiassetMultiAssetFilter,
+  XcmV2MultiassetMultiAssets,
+  XcmV2MultiassetWildFungibility,
+  XcmV2MultiassetWildMultiAsset,
+  XcmV2MultilocationJunctions,
+  XcmV2NetworkId,
+  XcmV2OriginKind,
   XcmV2Response,
   XcmV2TraitsError,
-  XcmV2TraitsOutcome,
   XcmV2WeightLimit,
   XcmV2Xcm,
+  XcmV3Instruction,
+  XcmV3Junction,
+  XcmV3JunctionBodyId,
+  XcmV3JunctionBodyPart,
+  XcmV3JunctionNetworkId,
+  XcmV3Junctions,
+  XcmV3MaybeErrorCode,
+  XcmV3MultiAsset,
+  XcmV3MultiLocation,
+  XcmV3MultiassetAssetId,
+  XcmV3MultiassetAssetInstance,
+  XcmV3MultiassetFungibility,
+  XcmV3MultiassetMultiAssetFilter,
+  XcmV3MultiassetMultiAssets,
+  XcmV3MultiassetWildFungibility,
+  XcmV3MultiassetWildMultiAsset,
+  XcmV3PalletInfo,
+  XcmV3QueryResponseInfo,
+  XcmV3Response,
+  XcmV3TraitsError,
+  XcmV3TraitsOutcome,
+  XcmV3WeightLimit,
+  XcmV3Xcm,
+  XcmVersionedAssetId,
   XcmVersionedMultiAsset,
   XcmVersionedMultiAssets,
   XcmVersionedMultiLocation,
@@ -343,6 +367,7 @@ declare module "@polkadot/types/types/registry" {
     CumulusPalletDmpQueueEvent: CumulusPalletDmpQueueEvent;
     CumulusPalletDmpQueuePageIndexData: CumulusPalletDmpQueuePageIndexData;
     CumulusPalletParachainSystemCall: CumulusPalletParachainSystemCall;
+    CumulusPalletParachainSystemCodeUpgradeAuthorization: CumulusPalletParachainSystemCodeUpgradeAuthorization;
     CumulusPalletParachainSystemError: CumulusPalletParachainSystemError;
     CumulusPalletParachainSystemEvent: CumulusPalletParachainSystemEvent;
     CumulusPalletParachainSystemRelayStateSnapshotMessagingStateSnapshot: CumulusPalletParachainSystemRelayStateSnapshotMessagingStateSnapshot;
@@ -396,6 +421,7 @@ declare module "@polkadot/types/types/registry" {
     FrameSystemEvent: FrameSystemEvent;
     FrameSystemEventRecord: FrameSystemEventRecord;
     FrameSystemExtensionsCheckGenesis: FrameSystemExtensionsCheckGenesis;
+    FrameSystemExtensionsCheckNonZeroSender: FrameSystemExtensionsCheckNonZeroSender;
     FrameSystemExtensionsCheckNonce: FrameSystemExtensionsCheckNonce;
     FrameSystemExtensionsCheckSpecVersion: FrameSystemExtensionsCheckSpecVersion;
     FrameSystemExtensionsCheckTxVersion: FrameSystemExtensionsCheckTxVersion;
@@ -470,6 +496,7 @@ declare module "@polkadot/types/types/registry" {
     PalletDemocracyDelegations: PalletDemocracyDelegations;
     PalletDemocracyError: PalletDemocracyError;
     PalletDemocracyEvent: PalletDemocracyEvent;
+    PalletDemocracyMetadataOwner: PalletDemocracyMetadataOwner;
     PalletDemocracyReferendumInfo: PalletDemocracyReferendumInfo;
     PalletDemocracyReferendumStatus: PalletDemocracyReferendumStatus;
     PalletDemocracyTally: PalletDemocracyTally;
@@ -485,6 +512,7 @@ declare module "@polkadot/types/types/registry" {
     PalletEthereumXcmError: PalletEthereumXcmError;
     PalletEthereumXcmRawOrigin: PalletEthereumXcmRawOrigin;
     PalletEvmCall: PalletEvmCall;
+    PalletEvmCodeMetadata: PalletEvmCodeMetadata;
     PalletEvmError: PalletEvmError;
     PalletEvmEvent: PalletEvmEvent;
     PalletIdentityBitFlags: PalletIdentityBitFlags;
@@ -507,6 +535,11 @@ declare module "@polkadot/types/types/registry" {
     PalletMoonbeamOrbitersCurrentOrbiter: PalletMoonbeamOrbitersCurrentOrbiter;
     PalletMoonbeamOrbitersError: PalletMoonbeamOrbitersError;
     PalletMoonbeamOrbitersEvent: PalletMoonbeamOrbitersEvent;
+    PalletMultisigCall: PalletMultisigCall;
+    PalletMultisigError: PalletMultisigError;
+    PalletMultisigEvent: PalletMultisigEvent;
+    PalletMultisigMultisig: PalletMultisigMultisig;
+    PalletMultisigTimepoint: PalletMultisigTimepoint;
     PalletParachainStakingAutoCompoundAutoCompoundConfig: PalletParachainStakingAutoCompoundAutoCompoundConfig;
     PalletParachainStakingBond: PalletParachainStakingBond;
     PalletParachainStakingBondWithAutoCompound: PalletParachainStakingBondWithAutoCompound;
@@ -583,6 +616,7 @@ declare module "@polkadot/types/types/registry" {
     PalletXcmEvent: PalletXcmEvent;
     PalletXcmOrigin: PalletXcmOrigin;
     PalletXcmQueryStatus: PalletXcmQueryStatus;
+    PalletXcmRemoteLockedFungibleRecord: PalletXcmRemoteLockedFungibleRecord;
     PalletXcmTransactorCall: PalletXcmTransactorCall;
     PalletXcmTransactorCurrency: PalletXcmTransactorCurrency;
     PalletXcmTransactorCurrencyPayment: PalletXcmTransactorCurrencyPayment;
@@ -627,36 +661,50 @@ declare module "@polkadot/types/types/registry" {
     XcmPrimitivesEthereumXcmEthereumXcmTransactionV1: XcmPrimitivesEthereumXcmEthereumXcmTransactionV1;
     XcmPrimitivesEthereumXcmEthereumXcmTransactionV2: XcmPrimitivesEthereumXcmEthereumXcmTransactionV2;
     XcmPrimitivesEthereumXcmManualEthereumXcmFee: XcmPrimitivesEthereumXcmManualEthereumXcmFee;
-    XcmV0Junction: XcmV0Junction;
-    XcmV0JunctionBodyId: XcmV0JunctionBodyId;
-    XcmV0JunctionBodyPart: XcmV0JunctionBodyPart;
-    XcmV0JunctionNetworkId: XcmV0JunctionNetworkId;
-    XcmV0MultiAsset: XcmV0MultiAsset;
-    XcmV0MultiLocation: XcmV0MultiLocation;
-    XcmV0Order: XcmV0Order;
-    XcmV0OriginKind: XcmV0OriginKind;
-    XcmV0Response: XcmV0Response;
-    XcmV0Xcm: XcmV0Xcm;
-    XcmV1Junction: XcmV1Junction;
-    XcmV1MultiAsset: XcmV1MultiAsset;
-    XcmV1MultiLocation: XcmV1MultiLocation;
-    XcmV1MultiassetAssetId: XcmV1MultiassetAssetId;
-    XcmV1MultiassetAssetInstance: XcmV1MultiassetAssetInstance;
-    XcmV1MultiassetFungibility: XcmV1MultiassetFungibility;
-    XcmV1MultiassetMultiAssetFilter: XcmV1MultiassetMultiAssetFilter;
-    XcmV1MultiassetMultiAssets: XcmV1MultiassetMultiAssets;
-    XcmV1MultiassetWildFungibility: XcmV1MultiassetWildFungibility;
-    XcmV1MultiassetWildMultiAsset: XcmV1MultiassetWildMultiAsset;
-    XcmV1MultilocationJunctions: XcmV1MultilocationJunctions;
-    XcmV1Order: XcmV1Order;
-    XcmV1Response: XcmV1Response;
-    XcmV1Xcm: XcmV1Xcm;
+    XcmV2BodyId: XcmV2BodyId;
+    XcmV2BodyPart: XcmV2BodyPart;
     XcmV2Instruction: XcmV2Instruction;
+    XcmV2Junction: XcmV2Junction;
+    XcmV2MultiAsset: XcmV2MultiAsset;
+    XcmV2MultiLocation: XcmV2MultiLocation;
+    XcmV2MultiassetAssetId: XcmV2MultiassetAssetId;
+    XcmV2MultiassetAssetInstance: XcmV2MultiassetAssetInstance;
+    XcmV2MultiassetFungibility: XcmV2MultiassetFungibility;
+    XcmV2MultiassetMultiAssetFilter: XcmV2MultiassetMultiAssetFilter;
+    XcmV2MultiassetMultiAssets: XcmV2MultiassetMultiAssets;
+    XcmV2MultiassetWildFungibility: XcmV2MultiassetWildFungibility;
+    XcmV2MultiassetWildMultiAsset: XcmV2MultiassetWildMultiAsset;
+    XcmV2MultilocationJunctions: XcmV2MultilocationJunctions;
+    XcmV2NetworkId: XcmV2NetworkId;
+    XcmV2OriginKind: XcmV2OriginKind;
     XcmV2Response: XcmV2Response;
     XcmV2TraitsError: XcmV2TraitsError;
-    XcmV2TraitsOutcome: XcmV2TraitsOutcome;
     XcmV2WeightLimit: XcmV2WeightLimit;
     XcmV2Xcm: XcmV2Xcm;
+    XcmV3Instruction: XcmV3Instruction;
+    XcmV3Junction: XcmV3Junction;
+    XcmV3JunctionBodyId: XcmV3JunctionBodyId;
+    XcmV3JunctionBodyPart: XcmV3JunctionBodyPart;
+    XcmV3JunctionNetworkId: XcmV3JunctionNetworkId;
+    XcmV3Junctions: XcmV3Junctions;
+    XcmV3MaybeErrorCode: XcmV3MaybeErrorCode;
+    XcmV3MultiAsset: XcmV3MultiAsset;
+    XcmV3MultiLocation: XcmV3MultiLocation;
+    XcmV3MultiassetAssetId: XcmV3MultiassetAssetId;
+    XcmV3MultiassetAssetInstance: XcmV3MultiassetAssetInstance;
+    XcmV3MultiassetFungibility: XcmV3MultiassetFungibility;
+    XcmV3MultiassetMultiAssetFilter: XcmV3MultiassetMultiAssetFilter;
+    XcmV3MultiassetMultiAssets: XcmV3MultiassetMultiAssets;
+    XcmV3MultiassetWildFungibility: XcmV3MultiassetWildFungibility;
+    XcmV3MultiassetWildMultiAsset: XcmV3MultiassetWildMultiAsset;
+    XcmV3PalletInfo: XcmV3PalletInfo;
+    XcmV3QueryResponseInfo: XcmV3QueryResponseInfo;
+    XcmV3Response: XcmV3Response;
+    XcmV3TraitsError: XcmV3TraitsError;
+    XcmV3TraitsOutcome: XcmV3TraitsOutcome;
+    XcmV3WeightLimit: XcmV3WeightLimit;
+    XcmV3Xcm: XcmV3Xcm;
+    XcmVersionedAssetId: XcmVersionedAssetId;
     XcmVersionedMultiAsset: XcmVersionedMultiAsset;
     XcmVersionedMultiAssets: XcmVersionedMultiAssets;
     XcmVersionedMultiLocation: XcmVersionedMultiLocation;

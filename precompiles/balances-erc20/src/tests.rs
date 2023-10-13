@@ -101,7 +101,7 @@ fn get_total_supply() {
 				.prepare_test(CryptoAlith, Precompile1, PCall::total_supply {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(3500u64));
+				.execute_returns(U256::from(3500u64));
 		});
 }
 
@@ -121,7 +121,7 @@ fn get_balances_known_user() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000u64));
+				.execute_returns(U256::from(1000u64));
 		});
 }
 
@@ -141,7 +141,7 @@ fn get_balances_unknown_user() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u64));
+				.execute_returns(U256::from(0u64));
 		});
 }
 
@@ -166,9 +166,9 @@ fn approve() {
 					SELECTOR_LOG_APPROVAL,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(500)).build(),
+					solidity::encode_event_data(U256::from(500)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 		});
 }
 
@@ -193,9 +193,9 @@ fn approve_saturating() {
 					SELECTOR_LOG_APPROVAL,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::MAX).build(),
+					solidity::encode_event_data(U256::MAX),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			precompiles()
 				.prepare_test(
@@ -208,7 +208,7 @@ fn approve_saturating() {
 				)
 				.expect_cost(0)
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(u128::MAX));
+				.execute_returns(U256::from(u128::MAX));
 		});
 }
 
@@ -240,7 +240,7 @@ fn check_allowance_existing() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(500u64));
+				.execute_returns(U256::from(500u64));
 		});
 }
 
@@ -261,7 +261,7 @@ fn check_allowance_not_existing() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u64));
+				.execute_returns(U256::from(0u64));
 		});
 }
 
@@ -280,15 +280,15 @@ fn transfer() {
 						value: 400.into(),
 					},
 				)
-				.expect_cost(173315756) // 1 weight => 1 gas in mock
+				.expect_cost(185308756) // 1 weight => 1 gas in mock
 				.expect_log(log3(
 					Precompile1,
 					SELECTOR_LOG_TRANSFER,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(400)).build(),
+					solidity::encode_event_data(U256::from(400)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			precompiles()
 				.prepare_test(
@@ -300,7 +300,7 @@ fn transfer() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(600));
+				.execute_returns(U256::from(600));
 
 			precompiles()
 				.prepare_test(
@@ -312,14 +312,17 @@ fn transfer() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400));
+				.execute_returns(U256::from(400));
 		});
 }
 
 #[test]
 fn transfer_not_enough_funds() {
 	ExtBuilder::default()
-		.with_balances(vec![(CryptoAlith.into(), 1000)])
+		.with_balances(vec![
+			(CryptoAlith.into(), 1000),
+			(CryptoBaltathar.into(), 1000),
+		])
 		.build()
 		.execute_with(|| {
 			precompiles()
@@ -335,7 +338,7 @@ fn transfer_not_enough_funds() {
 					from_utf8(&output)
 						.unwrap()
 						.contains("Dispatched call failed with error: ")
-						&& from_utf8(&output).unwrap().contains("InsufficientBalance")
+						&& from_utf8(&output).unwrap().contains("FundsUnavailable")
 				});
 		});
 }
@@ -367,15 +370,15 @@ fn transfer_from() {
 						value: 400.into(),
 					},
 				)
-				.expect_cost(173315756) // 1 weight => 1 gas in mock
+				.expect_cost(185308756) // 1 weight => 1 gas in mock
 				.expect_log(log3(
 					Precompile1,
 					SELECTOR_LOG_TRANSFER,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(400)).build(),
+					solidity::encode_event_data(U256::from(400)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			precompiles()
 				.prepare_test(
@@ -387,7 +390,7 @@ fn transfer_from() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(600));
+				.execute_returns(U256::from(600));
 
 			precompiles()
 				.prepare_test(
@@ -399,7 +402,7 @@ fn transfer_from() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400));
+				.execute_returns(U256::from(400));
 
 			precompiles()
 				.prepare_test(
@@ -412,7 +415,7 @@ fn transfer_from() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(100u64));
+				.execute_returns(U256::from(100u64));
 		});
 }
 
@@ -463,15 +466,15 @@ fn transfer_from_self() {
 						value: 400.into(),
 					},
 				)
-				.expect_cost(173315756) // 1 weight => 1 gas in mock
+				.expect_cost(185308756) // 1 weight => 1 gas in mock
 				.expect_log(log3(
 					Precompile1,
 					SELECTOR_LOG_TRANSFER,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(400)).build(),
+					solidity::encode_event_data(U256::from(400)),
 				))
-				.execute_returns_encoded(true);
+				.execute_returns(true);
 
 			precompiles()
 				.prepare_test(
@@ -483,7 +486,7 @@ fn transfer_from_self() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(600));
+				.execute_returns(U256::from(600));
 
 			precompiles()
 				.prepare_test(
@@ -495,7 +498,7 @@ fn transfer_from_self() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(400));
+				.execute_returns(U256::from(400));
 		});
 }
 
@@ -509,11 +512,7 @@ fn get_metadata_name() {
 				.prepare_test(CryptoAlith, Precompile1, PCall::name {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write::<UnboundedBytes>("Mock token".into())
-						.build(),
-				);
+				.execute_returns(UnboundedBytes::from("Mock token"));
 		});
 }
 
@@ -527,11 +526,7 @@ fn get_metadata_symbol() {
 				.prepare_test(CryptoAlith, Precompile1, PCall::symbol {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns(
-					EvmDataWriter::new()
-						.write::<UnboundedBytes>("MOCK".into())
-						.build(),
-				);
+				.execute_returns(UnboundedBytes::from("MOCK"));
 		});
 }
 
@@ -545,7 +540,7 @@ fn get_metadata_decimals() {
 				.prepare_test(CryptoAlith, Precompile1, PCall::decimals {})
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(18u8);
+				.execute_returns(18u8);
 		});
 }
 
@@ -565,7 +560,7 @@ fn deposit(data: Vec<u8>) {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Deposit
 			// We need to call using EVM pallet so we can check the EVM correctly sends the amount
@@ -612,7 +607,7 @@ fn deposit(data: Vec<u8>) {
 							Precompile1,
 							SELECTOR_LOG_DEPOSIT,
 							CryptoAlith,
-							EvmDataWriter::new().write(U256::from(500)).build(),
+							solidity::encode_event_data(U256::from(500)),
 						)
 					}),
 					RuntimeEvent::Evm(pallet_evm::Event::Executed {
@@ -632,7 +627,7 @@ fn deposit(data: Vec<u8>) {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Check CryptoAlith balance is still 1000.
 			precompiles()
@@ -645,7 +640,7 @@ fn deposit(data: Vec<u8>) {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000));
+				.execute_returns(U256::from(1000));
 		});
 }
 
@@ -656,7 +651,7 @@ fn deposit_function() {
 
 #[test]
 fn deposit_fallback() {
-	deposit(EvmDataWriter::new_with_selector(0x01234567u32).build())
+	deposit(solidity::encode_with_selector(0x01234567u32, ()))
 }
 
 #[test]
@@ -681,7 +676,7 @@ fn deposit_zero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Deposit
 			// We need to call using EVM pallet so we can check the EVM correctly sends the amount
@@ -718,7 +713,7 @@ fn deposit_zero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Check CryptoAlith balance is still 1000.
 			precompiles()
@@ -731,7 +726,7 @@ fn deposit_zero() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000));
+				.execute_returns(U256::from(1000));
 		});
 }
 
@@ -752,7 +747,7 @@ fn withdraw() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Withdraw
 			precompiles()
@@ -766,9 +761,9 @@ fn withdraw() {
 					Precompile1,
 					SELECTOR_LOG_WITHDRAWAL,
 					CryptoAlith,
-					EvmDataWriter::new().write(U256::from(500)).build(),
+					solidity::encode_event_data(U256::from(500)),
 				))
-				.execute_returns(vec![]);
+				.execute_returns(());
 
 			// Check CryptoAlith balance is still 1000.
 			precompiles()
@@ -781,7 +776,7 @@ fn withdraw() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000));
+				.execute_returns(U256::from(1000));
 		});
 }
 
@@ -802,7 +797,7 @@ fn withdraw_more_than_owned() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0));
+				.execute_returns(U256::from(0));
 
 			// Withdraw
 			precompiles()
@@ -824,7 +819,7 @@ fn withdraw_more_than_owned() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1000));
+				.execute_returns(U256::from(1000));
 		});
 }
 
@@ -862,7 +857,7 @@ fn permit_valid() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 
 			precompiles()
 				.prepare_test(
@@ -884,9 +879,9 @@ fn permit_valid() {
 					SELECTOR_LOG_APPROVAL,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(value)).build(),
+					solidity::encode_event_data(U256::from(value)),
 				))
-				.execute_returns(vec![]);
+				.execute_returns(());
 
 			precompiles()
 				.prepare_test(
@@ -899,7 +894,7 @@ fn permit_valid() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(500u16));
+				.execute_returns(U256::from(500u16));
 
 			precompiles()
 				.prepare_test(
@@ -911,7 +906,7 @@ fn permit_valid() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(1u8));
+				.execute_returns(U256::from(1u8));
 		});
 }
 
@@ -949,7 +944,7 @@ fn permit_invalid_nonce() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 
 			precompiles()
 				.prepare_test(
@@ -978,7 +973,7 @@ fn permit_invalid_nonce() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u16));
+				.execute_returns(U256::from(0u16));
 
 			precompiles()
 				.prepare_test(
@@ -990,7 +985,7 @@ fn permit_invalid_nonce() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 		});
 }
 
@@ -1015,7 +1010,7 @@ fn permit_invalid_signature() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 
 			precompiles()
 				.prepare_test(
@@ -1044,7 +1039,7 @@ fn permit_invalid_signature() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u16));
+				.execute_returns(U256::from(0u16));
 
 			precompiles()
 				.prepare_test(
@@ -1056,7 +1051,7 @@ fn permit_invalid_signature() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 		});
 }
 
@@ -1096,7 +1091,7 @@ fn permit_invalid_deadline() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 
 			precompiles()
 				.prepare_test(
@@ -1125,7 +1120,7 @@ fn permit_invalid_deadline() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u16));
+				.execute_returns(U256::from(0u16));
 
 			precompiles()
 				.prepare_test(
@@ -1137,7 +1132,7 @@ fn permit_invalid_deadline() {
 				)
 				.expect_cost(0) // TODO: Test db read/write costs
 				.expect_no_logs()
-				.execute_returns_encoded(U256::from(0u8));
+				.execute_returns(U256::from(0u8));
 		});
 }
 
@@ -1303,33 +1298,16 @@ fn permit_valid_with_metamask_signed_data() {
 					SELECTOR_LOG_APPROVAL,
 					CryptoAlith,
 					Bob,
-					EvmDataWriter::new().write(U256::from(1000)).build(),
+					solidity::encode_event_data(U256::from(1000)),
 				))
-				.execute_returns(vec![]);
+				.execute_returns(());
 		});
 }
 
 #[test]
 fn test_solidity_interface_has_all_function_selectors_documented_and_implemented() {
-	for file in ["ERC20.sol", "Permit.sol"] {
-		for solidity_fn in solidity::get_selectors(file) {
-			assert_eq!(
-				solidity_fn.compute_selector_hex(),
-				solidity_fn.docs_selector,
-				"documented selector for '{}' did not match for file '{}'",
-				solidity_fn.signature(),
-				file,
-			);
-
-			let selector = solidity_fn.compute_selector();
-			if !PCall::supports_selector(selector) {
-				panic!(
-					"failed decoding selector 0x{:x} => '{}' as Action for file '{}'",
-					selector,
-					solidity_fn.signature(),
-					file,
-				)
-			}
-		}
-	}
+	check_precompile_implements_solidity_interfaces(
+		&["ERC20.sol", "Permit.sol"],
+		PCall::supports_selector,
+	)
 }

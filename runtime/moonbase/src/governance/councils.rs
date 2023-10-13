@@ -17,11 +17,17 @@
 //! Councils for Gov1 and Gov2
 
 use super::*;
+use moonbeam_runtime_common::weights as moonbeam_weights;
 
 pub type CouncilInstance = pallet_collective::Instance1;
 pub type TechCommitteeInstance = pallet_collective::Instance2;
 pub type TreasuryCouncilInstance = pallet_collective::Instance3;
 pub type OpenTechCommitteeInstance = pallet_collective::Instance4;
+
+parameter_types! {
+	// TODO: Check value of this parameter
+	pub MaxProposalWeight: Weight = Perbill::from_percent(50) * BlockWeights::get().max_block;
+}
 
 impl pallet_collective::Config<CouncilInstance> for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
@@ -35,8 +41,9 @@ impl pallet_collective::Config<CouncilInstance> for Runtime {
 	/// The maximum number of council members.
 	type MaxMembers = ConstU32<100>;
 	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = referenda::GeneralAdminOrRoot;
+	type MaxProposalWeight = MaxProposalWeight;
 }
 
 impl pallet_collective::Config<TechCommitteeInstance> for Runtime {
@@ -51,8 +58,9 @@ impl pallet_collective::Config<TechCommitteeInstance> for Runtime {
 	/// The maximum number of technical committee members.
 	type MaxMembers = ConstU32<100>;
 	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = referenda::GeneralAdminOrRoot;
+	type MaxProposalWeight = MaxProposalWeight;
 }
 
 impl pallet_collective::Config<TreasuryCouncilInstance> for Runtime {
@@ -67,8 +75,9 @@ impl pallet_collective::Config<TreasuryCouncilInstance> for Runtime {
 	/// The maximum number of treasury council members.
 	type MaxMembers = ConstU32<9>;
 	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = referenda::GeneralAdminOrRoot;
+	type MaxProposalWeight = MaxProposalWeight;
 }
 
 impl pallet_collective::Config<OpenTechCommitteeInstance> for Runtime {
@@ -83,6 +92,7 @@ impl pallet_collective::Config<OpenTechCommitteeInstance> for Runtime {
 	/// The maximum number of technical committee members.
 	type MaxMembers = ConstU32<100>;
 	type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = referenda::GeneralAdminOrRoot;
+	type MaxProposalWeight = MaxProposalWeight;
 }

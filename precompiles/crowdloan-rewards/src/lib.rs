@@ -60,7 +60,9 @@ where
 	#[precompile::public("is_contributor(address)")]
 	#[precompile::view]
 	fn is_contributor(handle: &mut impl PrecompileHandle, contributor: Address) -> EvmResult<bool> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?; // accounts_payable
+		// AccountsPayable: Blake2128(16) + 20 + RewardInfo(16 + 16 + UnBoundedVec<AccountId32(32)>)
+		// TODO RewardInfo.contributed_relay_addresses is unbounded, we set a safe length of 100.
+		handle.record_db_read::<Runtime>(3268)?;
 
 		let contributor: H160 = contributor.into();
 
@@ -88,7 +90,9 @@ where
 		handle: &mut impl PrecompileHandle,
 		contributor: Address,
 	) -> EvmResult<(U256, U256)> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?; // accounts_payable
+		// AccountsPayable: Blake2128(16) + 20 + RewardInfo(16 + 16 + UnBoundedVec<AccountId32(32)>)
+		// TODO RewardInfo.contributed_relay_addresses is unbounded, we set a safe length of 100.
+		handle.record_db_read::<Runtime>(3268)?;
 
 		let contributor: H160 = contributor.into();
 
@@ -131,7 +135,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = pallet_crowdloan_rewards::Call::<Runtime>::claim {};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -157,7 +161,7 @@ where
 		let call =
 			pallet_crowdloan_rewards::Call::<Runtime>::update_reward_address { new_reward_account };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

@@ -1,10 +1,5 @@
-import { describeSuite, beforeAll, expect } from "@moonsong-labs/moonwall-cli";
-import {
-  ALITH_PRIVATE_KEY,
-  BALTATHAR_ADDRESS,
-  CHARLETH_ADDRESS,
-  alith,
-} from "@moonsong-labs/moonwall-util";
+import { describeSuite, beforeAll, expect } from "@moonwall/cli";
+import { ALITH_PRIVATE_KEY, BALTATHAR_ADDRESS, CHARLETH_ADDRESS, alith } from "@moonwall/util";
 import { ApiPromise } from "@polkadot/api";
 import { parseEther, ethers, Transaction, Wallet, parseUnits } from "ethers";
 import "@moonbeam-network/api-augment";
@@ -18,7 +13,7 @@ describeSuite({
     const DUMMY_ACCOUNT = "0x11d88f59425cbc1867883fcf93614bf70e87E854";
 
     beforeAll(() => {
-      api = context.getMoonbeam();
+      api = context.polkadotJs();
     });
 
     it({
@@ -67,14 +62,14 @@ describeSuite({
 
         tx.to = DUMMY_ACCOUNT;
         tx.value = parseEther("2").toString();
-        tx.chainId = (await signer.provider.getNetwork()).chainId;
+        tx.chainId = (await signer.provider!.getNetwork()).chainId;
         tx.nonce = await signer.getNonce();
         tx.maxPriorityFeePerGas = parseUnits("1.5", "gwei");
         tx.maxFeePerGas = parseUnits("5", "gwei");
         tx.gasLimit = 300000;
 
         const signedTx = await signer.signTransaction(tx);
-        const signed = Transaction.from(signedTx).signature;
+        const signed = Transaction.from(signedTx).signature!;
         let transaction = {
           EIP1559: {
             chainId: Transaction.from(signedTx).chainId,

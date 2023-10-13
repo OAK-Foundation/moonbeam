@@ -101,6 +101,23 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = ();
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
+}
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+	pub struct BenchmarkHelper;
+	impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter> for BenchmarkHelper
+	where
+		AssetIdParameter: From<u128>,
+	{
+		fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+			(id as u128).into()
+		}
+	}
 }
 
 parameter_types! {
@@ -134,6 +151,9 @@ impl pallet_assets::Config for Runtime {
 	type AssetIdParameter = AssetId;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 parameter_types! {
@@ -290,6 +310,11 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 
 pub type XcmRouter = super::ParachainXcmRouter<MsgQueue>;
 
+#[cfg(feature = "runtime-benchmarks")]
+parameter_types! {
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+}
+
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
@@ -311,6 +336,11 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
+	type MaxRemoteLockConsumers = ConstU32<0>;
+	type RemoteLockConsumerIdentifier = ();
+	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -333,7 +363,6 @@ pub mod mock_msg_queue {
 	impl<T: Config> Pallet<T> {}
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
@@ -477,7 +506,6 @@ pub mod mock_statemine_prefix {
 	impl<T: Config> Pallet<T> {}
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 

@@ -18,7 +18,7 @@
 //!
 
 use super::{
-	currency, xcm_config, AccountId, AssetId, AssetManager, Assets, Balance, Balances,
+	currency, governance, xcm_config, AccountId, AssetId, AssetManager, Assets, Balance, Balances,
 	CouncilInstance, LocalAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	FOREIGN_ASSET_PRECOMPILE_ADDRESS_PREFIX, LOCAL_ASSET_PRECOMPILE_ADDRESS_PREFIX,
 };
@@ -29,6 +29,7 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, EitherOfDiverse},
 	weights::Weight,
 };
+use moonbeam_runtime_common::weights as moonbeam_weights;
 use pallet_evm_precompileset_assets_erc20::AccountIdAssetIdConversion;
 use sp_runtime::traits::Hash as THash;
 
@@ -71,8 +72,24 @@ parameter_types! {
 /// We allow root and Chain council to execute privileged asset operations.
 pub type AssetsForceOrigin = EitherOfDiverse<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilInstance, 1, 2>,
+	EitherOfDiverse<
+		pallet_collective::EnsureProportionMoreThan<AccountId, CouncilInstance, 1, 2>,
+		governance::custom_origins::GeneralAdmin,
+	>,
 >;
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+	pub struct BenchmarkHelper;
+	impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter> for BenchmarkHelper
+	where
+		AssetIdParameter: From<u128>,
+	{
+		fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+			(id as u128).into()
+		}
+	}
+}
 
 // Foreign assets
 impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
@@ -89,11 +106,14 @@ impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = ConstU128<{ currency::deposit(1, 18) }>;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_assets::WeightInfo<Runtime>;
 	type RemoveItemsLimit = ConstU32<{ REMOVE_ITEMS_LIMIT }>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 // Local assets
@@ -111,11 +131,14 @@ impl pallet_assets::Config<LocalAssetInstance> for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type AssetAccountDeposit = ConstU128<{ currency::deposit(1, 18) }>;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_assets::WeightInfo<Runtime>;
 	type RemoveItemsLimit = ConstU32<{ REMOVE_ITEMS_LIMIT }>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 // We instruct how to register the Assets
@@ -259,6 +282,21 @@ pub struct AssetRegistrarMetadata {
 	pub is_frozen: bool,
 }
 
+pub type ForeignAssetModifierOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	EitherOfDiverse<
+		pallet_collective::EnsureProportionMoreThan<AccountId, CouncilInstance, 1, 2>,
+		governance::custom_origins::GeneralAdmin,
+	>,
+>;
+pub type LocalAssetModifierOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	EitherOfDiverse<
+		pallet_collective::EnsureProportionMoreThan<AccountId, CouncilInstance, 1, 2>,
+		governance::custom_origins::GeneralAdmin,
+	>,
+>;
+
 impl pallet_asset_manager::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
@@ -266,12 +304,12 @@ impl pallet_asset_manager::Config for Runtime {
 	type AssetRegistrarMetadata = AssetRegistrarMetadata;
 	type ForeignAssetType = xcm_config::AssetType;
 	type AssetRegistrar = AssetRegistrar;
-	type ForeignAssetModifierOrigin = EnsureRoot<AccountId>;
-	type LocalAssetModifierOrigin = EnsureRoot<AccountId>;
+	type ForeignAssetModifierOrigin = ForeignAssetModifierOrigin;
+	type LocalAssetModifierOrigin = LocalAssetModifierOrigin;
 	type LocalAssetIdCreator = LocalAssetIdCreator;
 	type Currency = Balances;
 	type LocalAssetDeposit = AssetDeposit;
-	type WeightInfo = pallet_asset_manager::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = moonbeam_weights::pallet_asset_manager::WeightInfo<Runtime>;
 }
 
 // Instruct how to go from an H160 to an AssetID

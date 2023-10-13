@@ -17,7 +17,7 @@ import type {
   SpVersionRuntimeVersion,
   SpWeightsRuntimeDbWeight,
   SpWeightsWeightV2Weight,
-  XcmV1MultiLocation,
+  XcmV3MultiLocation,
 } from "@polkadot/types/lookup";
 
 export type __AugmentedConst<ApiType extends ApiTypes> = AugmentedConst<ApiType>;
@@ -210,6 +210,26 @@ declare module "@polkadot/api-base/types/consts" {
       /** Generic const */
       [key: string]: Codec;
     };
+    multisig: {
+      /**
+       * The base amount of currency needed to reserve for creating a multisig execution or to store
+       * a dispatch call for later.
+       *
+       * This is held for an additional storage item whose value size is `4 + sizeof((BlockNumber,
+       * Balance, AccountId))` bytes and whose key size is `32 + sizeof(AccountId)` bytes.
+       */
+      depositBase: u128 & AugmentedConst<ApiType>;
+      /**
+       * The amount of currency needed per unit threshold when creating a multisig execution.
+       *
+       * This is held for adding 32 bytes more into a pre-existing storage value.
+       */
+      depositFactor: u128 & AugmentedConst<ApiType>;
+      /** The maximum amount of signatories allowed in the multisig. */
+      maxSignatories: u32 & AugmentedConst<ApiType>;
+      /** Generic const */
+      [key: string]: Codec;
+    };
     parachainStaking: {
       /** Number of rounds candidate requests to decrease self-bond must wait to be executable */
       candidateBondLessDelay: u32 & AugmentedConst<ApiType>;
@@ -229,8 +249,6 @@ declare module "@polkadot/api-base/types/consts" {
       minBlocksPerRound: u32 & AugmentedConst<ApiType>;
       /** Minimum stake required for any account to be a collator candidate */
       minCandidateStk: u128 & AugmentedConst<ApiType>;
-      /** Minimum stake required for any candidate to be in `SelectedCandidates` for the round */
-      minCollatorStk: u128 & AugmentedConst<ApiType>;
       /** Minimum stake for any registered on-chain account to delegate */
       minDelegation: u128 & AugmentedConst<ApiType>;
       /** Minimum stake for any registered on-chain account to be a delegator */
@@ -422,9 +440,9 @@ declare module "@polkadot/api-base/types/consts" {
     };
     xcmTransactor: {
       /** The actual weight for an XCM message is `T::BaseXcmWeight + T::Weigher::weight(&msg)`. */
-      baseXcmWeight: u64 & AugmentedConst<ApiType>;
+      baseXcmWeight: SpWeightsWeightV2Weight & AugmentedConst<ApiType>;
       /** Self chain location. */
-      selfLocation: XcmV1MultiLocation & AugmentedConst<ApiType>;
+      selfLocation: XcmV3MultiLocation & AugmentedConst<ApiType>;
       /** Generic const */
       [key: string]: Codec;
     };
@@ -434,9 +452,9 @@ declare module "@polkadot/api-base/types/consts" {
        *
        * The actually weight for an XCM message is `T::BaseXcmWeight + T::Weigher::weight(&msg)`.
        */
-      baseXcmWeight: u64 & AugmentedConst<ApiType>;
+      baseXcmWeight: SpWeightsWeightV2Weight & AugmentedConst<ApiType>;
       /** Self chain location. */
-      selfLocation: XcmV1MultiLocation & AugmentedConst<ApiType>;
+      selfLocation: XcmV3MultiLocation & AugmentedConst<ApiType>;
       /** Generic const */
       [key: string]: Codec;
     };

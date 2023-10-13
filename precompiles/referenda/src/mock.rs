@@ -60,7 +60,7 @@ construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
-	pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+	pub const MaximumBlockWeight: Weight = Weight::from_parts(1024, 1);
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -105,6 +105,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 pub type TestPrecompiles<R> = PrecompileSetBuilder<
@@ -117,10 +121,22 @@ pub type TestPrecompiles<R> = PrecompileSetBuilder<
 
 pub type PCall = ReferendaPrecompileCall<Runtime, GovOrigin>;
 
+const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
+/// Block storage limit in bytes. Set to 40 KB.
+const BLOCK_STORAGE_LIMIT: u64 = 40 * 1024;
+
 parameter_types! {
-	pub BlockGasLimit: U256 = U256::max_value();
+	pub BlockGasLimit: U256 = U256::from(u64::MAX);
 	pub PrecompilesValue: TestPrecompiles<Runtime> = TestPrecompiles::new();
-	pub const WeightPerGas: Weight = Weight::from_ref_time(1);
+	pub const WeightPerGas: Weight = Weight::from_parts(1, 0);
+	pub GasLimitPovSizeRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(MAX_POV_SIZE)
+	};
+	pub GasLimitStorageGrowthRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(BLOCK_STORAGE_LIMIT)
+	};
 }
 
 impl pallet_evm::Config for Runtime {
@@ -141,6 +157,10 @@ impl pallet_evm::Config for Runtime {
 	type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
 	type FindAuthor = ();
 	type OnCreate = ();
+	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
+	type GasLimitStorageGrowthRatio = GasLimitStorageGrowthRatio;
+	type Timestamp = Timestamp;
+	type WeightInfo = pallet_evm::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

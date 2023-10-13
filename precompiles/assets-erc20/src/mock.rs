@@ -156,6 +156,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 pub type Precompiles<R> = PrecompileSetBuilder<
@@ -175,10 +179,22 @@ pub type Precompiles<R> = PrecompileSetBuilder<
 pub type LocalPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_assets::Instance2>;
 pub type ForeignPCall = Erc20AssetsPrecompileSetCall<Runtime, IsLocal, pallet_assets::Instance1>;
 
+const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
+/// Block Storage Limit in bytes. Set to 40KB.
+const BLOCK_STORAGE_LIMIT: u64 = 40 * 1024;
+
 parameter_types! {
-	pub BlockGasLimit: U256 = U256::max_value();
+	pub BlockGasLimit: U256 = U256::from(u64::MAX);
 	pub PrecompilesValue: Precompiles<Runtime> = Precompiles::new();
-	pub WeightPerGas: Weight = Weight::from_ref_time(1);
+	pub WeightPerGas: Weight = Weight::from_parts(1, 0);
+	pub GasLimitPovSizeRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(MAX_POV_SIZE)
+	};
+	pub GasLimitStorageGrowthRatio: u64 = {
+		let block_gas_limit = BlockGasLimit::get().min(u64::MAX.into()).low_u64();
+		block_gas_limit.saturating_div(BLOCK_STORAGE_LIMIT)
+	};
 }
 
 impl pallet_evm::Config for Runtime {
@@ -199,10 +215,27 @@ impl pallet_evm::Config for Runtime {
 	type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
 	type FindAuthor = ();
 	type OnCreate = ();
+	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
+	type GasLimitStorageGrowthRatio = GasLimitStorageGrowthRatio;
+	type Timestamp = Timestamp;
+	type WeightInfo = pallet_evm::weights::SubstrateWeight<Runtime>;
 }
 
 type ForeignAssetInstance = pallet_assets::Instance1;
 type LocalAssetInstance = pallet_assets::Instance2;
+
+// Required for runtime benchmarks
+pallet_assets::runtime_benchmarks_enabled! {
+	pub struct BenchmarkHelper;
+	impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter> for BenchmarkHelper
+	where
+		AssetIdParameter: From<u128>,
+	{
+		fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+			(id as u128).into()
+		}
+	}
+}
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
 // No deposit is substracted with those methods
@@ -234,6 +267,9 @@ impl pallet_assets::Config<ForeignAssetInstance> for Runtime {
 	type AssetIdParameter = AssetId;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 impl pallet_assets::Config<LocalAssetInstance> for Runtime {
@@ -255,6 +291,9 @@ impl pallet_assets::Config<LocalAssetInstance> for Runtime {
 	type AssetIdParameter = AssetId;
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
 	type CallbackHandle = ();
+	pallet_assets::runtime_benchmarks_enabled! {
+		type BenchmarkHelper = BenchmarkHelper;
+	}
 }
 
 // Configure a mock runtime to test the pallet.

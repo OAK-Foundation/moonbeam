@@ -17,11 +17,11 @@
 //! This module constructs and executes the appropriate service components for the given subcommand
 
 use crate::cli::{Cli, RelayChainCli, RunCmd, Subcommand};
-use cumulus_client_cli::generate_genesis_block;
+use cumulus_client_cli::{extract_genesis_wasm, generate_genesis_block};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::BenchmarkCmd;
 use log::{info, warn};
-use moonbeam_cli_opt::{EthApi, RpcConfig};
+use moonbeam_cli_opt::EthApi;
 use moonbeam_service::{chain_spec, frontier_database_dir, IdentifyVariant};
 use parity_scale_codec::Encode;
 #[cfg(feature = "westend-native")]
@@ -37,6 +37,11 @@ use sc_service::{
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{AccountIdConversion, Block as _};
 use std::{io::Write, net::SocketAddr};
+
+#[cfg(feature = "try-runtime")]
+use try_runtime_cli::block_building_info::substrate_info;
+#[cfg(feature = "try-runtime")]
+const SLOT_DURATION: u64 = 12;
 
 fn load_spec(
 	id: &str,
@@ -195,16 +200,6 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
-#[allow(clippy::borrowed_box)]
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-	let mut storage = chain_spec.build_storage()?;
-
-	storage
-		.top
-		.remove(sp_core::storage::well_known_keys::CODE)
-		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
-}
-
 fn validate_trace_environment(cli: &Cli) -> Result<()> {
 	if (cli.run.ethapi.contains(&EthApi::Debug) || cli.run.ethapi.contains(&EthApi::Trace))
 		&& cli
@@ -275,31 +270,37 @@ pub fn run() -> Result<()> {
 		}
 		Some(Subcommand::CheckBlock(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let rpc_config = cli.run.new_rpc_config();
 			runner.async_run(|mut config| {
 				let (client, _, import_queue, task_manager) =
-					moonbeam_service::new_chain_ops(&mut config)?;
+					moonbeam_service::new_chain_ops(&mut config, &rpc_config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let rpc_config = cli.run.new_rpc_config();
 			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = moonbeam_service::new_chain_ops(&mut config)?;
+				let (client, _, _, task_manager) =
+					moonbeam_service::new_chain_ops(&mut config, &rpc_config)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		}
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let rpc_config = cli.run.new_rpc_config();
 			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = moonbeam_service::new_chain_ops(&mut config)?;
+				let (client, _, _, task_manager) =
+					moonbeam_service::new_chain_ops(&mut config, &rpc_config)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		}
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let rpc_config = cli.run.new_rpc_config();
 			runner.async_run(|mut config| {
 				let (client, _, import_queue, task_manager) =
-					moonbeam_service::new_chain_ops(&mut config)?;
+					moonbeam_service::new_chain_ops(&mut config, &rpc_config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		}
@@ -309,9 +310,8 @@ pub fn run() -> Result<()> {
 				// Although the cumulus_client_cli::PurgeCommand will extract the relay chain id,
 				// we need to extract it here to determine whether we are running the dev service.
 				let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
-				let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-				let dev_service =
-					cli.run.dev_service || relay_chain_id == Some("dev-service".to_string());
+				let relay_chain_id = extension.map(|e| e.relay_chain.as_str());
+				let dev_service = cli.run.dev_service || relay_chain_id == Some("dev-service");
 
 				// Remove Frontier offchain db
 				let frontier_database_config = match config.database {
@@ -353,13 +353,14 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
+			let rpc_config = cli.run.new_rpc_config();
 			match chain_spec {
 				#[cfg(feature = "moonriver-native")]
 				spec if spec.is_moonriver() => runner.async_run(|mut config| {
 					let params = moonbeam_service::new_partial::<
 						moonbeam_service::moonriver_runtime::RuntimeApi,
 						moonbeam_service::MoonriverExecutor,
-					>(&mut config, false)?;
+					>(&mut config, &rpc_config, false)?;
 
 					Ok((
 						cmd.run(params.client, params.backend, None),
@@ -371,7 +372,7 @@ pub fn run() -> Result<()> {
 					let params = moonbeam_service::new_partial::<
 						moonbeam_service::moonbeam_runtime::RuntimeApi,
 						moonbeam_service::MoonbeamExecutor,
-					>(&mut config, false)?;
+					>(&mut config, &rpc_config, false)?;
 
 					Ok((
 						cmd.run(params.client, params.backend, None),
@@ -383,7 +384,7 @@ pub fn run() -> Result<()> {
 					let params = moonbeam_service::new_partial::<
 						moonbeam_service::moonbase_runtime::RuntimeApi,
 						moonbeam_service::MoonbaseExecutor,
-					>(&mut config, false)?;
+					>(&mut config, &rpc_config, false)?;
 
 					Ok((
 						cmd.run(params.client, params.backend, None),
@@ -401,7 +402,7 @@ pub fn run() -> Result<()> {
 
 			// Cumulus approach here, we directly call the generic load_spec func
 			let chain_spec = load_spec(
-				&params.chain.clone().unwrap_or_default(),
+				params.chain.as_deref().unwrap_or_default(),
 				params.parachain_id.unwrap_or(1000).into(),
 				&cli.run,
 			)?;
@@ -461,8 +462,9 @@ pub fn run() -> Result<()> {
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let raw_wasm_blob =
-				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
+			let raw_wasm_blob = extract_genesis_wasm(
+				&*cli.load_spec(params.chain.as_deref().unwrap_or_default())?,
+			)?;
 			let output_buf = if params.raw {
 				raw_wasm_blob
 			} else {
@@ -527,6 +529,7 @@ pub fn run() -> Result<()> {
 				}
 				BenchmarkCmd::Block(cmd) => {
 					let chain_spec = &runner.config().chain_spec;
+					let rpc_config = cli.run.new_rpc_config();
 					match chain_spec {
 						#[cfg(feature = "moonriver-native")]
 						spec if spec.is_moonriver() => {
@@ -534,7 +537,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonriver_runtime::RuntimeApi,
 									moonbeam_service::MoonriverExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								cmd.run(params.client)
 							})
@@ -545,7 +548,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonbeam_runtime::RuntimeApi,
 									moonbeam_service::MoonbeamExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								cmd.run(params.client)
 							})
@@ -556,7 +559,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonbase_runtime::RuntimeApi,
 									moonbeam_service::MoonbaseExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								cmd.run(params.client)
 							})
@@ -573,6 +576,7 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "runtime-benchmarks")]
 				BenchmarkCmd::Storage(cmd) => {
 					let chain_spec = &runner.config().chain_spec;
+					let rpc_config = cli.run.new_rpc_config();
 					match chain_spec {
 						#[cfg(feature = "moonriver-native")]
 						spec if spec.is_moonriver() => {
@@ -580,7 +584,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonriver_runtime::RuntimeApi,
 									moonbeam_service::MoonriverExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								let db = params.backend.expose_db();
 								let storage = params.backend.expose_storage();
@@ -594,7 +598,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonbeam_runtime::RuntimeApi,
 									moonbeam_service::MoonbeamExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								let db = params.backend.expose_db();
 								let storage = params.backend.expose_storage();
@@ -608,7 +612,7 @@ pub fn run() -> Result<()> {
 								let params = moonbeam_service::new_partial::<
 									moonbeam_service::moonbase_runtime::RuntimeApi,
 									moonbeam_service::MoonbaseExecutor,
-								>(&mut config, false)?;
+								>(&mut config, &rpc_config, false)?;
 
 								let db = params.backend.expose_db();
 								let storage = params.backend.expose_storage();
@@ -646,6 +650,7 @@ pub fn run() -> Result<()> {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
 
+					let info_provider = substrate_info(SLOT_DURATION);
 					Ok((
 						cmd.run::<
 							moonbeam_service::moonriver_runtime::Block,
@@ -653,7 +658,7 @@ pub fn run() -> Result<()> {
 								sp_io::SubstrateHostFunctions,
 								<moonbeam_service::MoonriverExecutor
 									as sc_service::NativeExecutionDispatch>::ExtendHostFunctions,
-						>>(),
+						>, _>(Some(info_provider)),
 						task_manager,
 					))
 				}),
@@ -666,6 +671,7 @@ pub fn run() -> Result<()> {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
 
+					let info_provider = substrate_info(SLOT_DURATION);
 					Ok((
 						cmd.run::<
 							moonbeam_service::moonbeam_runtime::Block,
@@ -673,7 +679,7 @@ pub fn run() -> Result<()> {
 								sp_io::SubstrateHostFunctions,
 								<moonbeam_service::MoonbeamExecutor
 									as sc_service::NativeExecutionDispatch>::ExtendHostFunctions,
-						>>(),
+						>, _>(Some(info_provider)),
 						task_manager,
 					))
 				}),
@@ -689,6 +695,7 @@ pub fn run() -> Result<()> {
 									sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 								})?;
 
+						let info_provider = substrate_info(SLOT_DURATION);
 						Ok((
 							cmd.run::<
 								moonbeam_service::moonbase_runtime::Block,
@@ -696,7 +703,7 @@ pub fn run() -> Result<()> {
 									sp_io::SubstrateHostFunctions,
 									<moonbeam_service::MoonbaseExecutor
 										as sc_service::NativeExecutionDispatch>::ExtendHostFunctions,
-							>>(),
+							>, _>(Some(info_provider)),
 							task_manager,
 						))
 					})
@@ -726,18 +733,7 @@ pub fn run() -> Result<()> {
 				let para_id = extension.map(|e| e.para_id);
 				let id = ParaId::from(cli.run.parachain_id.clone().or(para_id).unwrap_or(1000));
 
-				let rpc_config = RpcConfig {
-					ethapi: cli.run.ethapi,
-					ethapi_max_permits: cli.run.ethapi_max_permits,
-					ethapi_trace_max_count: cli.run.ethapi_trace_max_count,
-					ethapi_trace_cache_duration: cli.run.ethapi_trace_cache_duration,
-					eth_log_block_cache: cli.run.eth_log_block_cache,
-					eth_statuses_cache: cli.run.eth_statuses_cache,
-					fee_history_limit: cli.run.fee_history_limit,
-					max_past_logs: cli.run.max_past_logs,
-					relay_chain_rpc_urls: cli.run.base.relay_chain_rpc_urls,
-					tracing_raw_max_memory_usage: cli.run.tracing_raw_max_memory_usage,
-				};
+				let rpc_config = cli.run.new_rpc_config();
 
 				// If dev service was requested, start up manual or instant seal.
 				// Otherwise continue with the normal parachain node.
@@ -745,15 +741,14 @@ pub fn run() -> Result<()> {
 				// 1. by providing the --dev-service flag to the CLI
 				// 2. by specifying "dev-service" in the chain spec's "relay-chain" field.
 				// NOTE: the --dev flag triggers the dev service by way of number 2
-				let relay_chain_id = extension.map(|e| e.relay_chain.clone());
+				let relay_chain_id = extension.map(|e| e.relay_chain.as_str());
 				let dev_service =
-					config.chain_spec.is_dev() || relay_chain_id == Some("dev-service".to_string());
+					config.chain_spec.is_dev() || relay_chain_id == Some("dev-service");
 
 				if dev_service {
 					// When running the dev service, just use Alice's author inherent
 					//TODO maybe make the --alice etc flags work here, and consider bringing back
 					// the author-id flag. For now, this will work.
-
 					let author_id = Some(chain_spec::get_from_seed::<nimbus_primitives::NimbusId>(
 						"Alice",
 					));
@@ -764,18 +759,21 @@ pub fn run() -> Result<()> {
 							moonbeam_service::moonriver_runtime::RuntimeApi,
 							moonbeam_service::MoonriverExecutor,
 						>(config, author_id, cli.run.sealing, rpc_config, hwbench)
+						.await
 						.map_err(Into::into),
 						#[cfg(feature = "moonbeam-native")]
 						spec if spec.is_moonbeam() => moonbeam_service::new_dev::<
 							moonbeam_service::moonbeam_runtime::RuntimeApi,
 							moonbeam_service::MoonbeamExecutor,
 						>(config, author_id, cli.run.sealing, rpc_config, hwbench)
+						.await
 						.map_err(Into::into),
 						#[cfg(feature = "moonbase-native")]
 						_ => moonbeam_service::new_dev::<
 							moonbeam_service::moonbase_runtime::RuntimeApi,
 							moonbeam_service::MoonbaseExecutor,
 						>(config, author_id, cli.run.sealing, rpc_config, hwbench)
+						.await
 						.map_err(Into::into),
 						#[cfg(not(feature = "moonbase-native"))]
 						_ => panic!("invalid chain spec"),
@@ -790,7 +788,7 @@ pub fn run() -> Result<()> {
 				);
 
 				let parachain_account =
-					AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+					AccountIdConversion::<polkadot_primitives::v4::AccountId>::into_account_truncating(&id);
 
 				let state_version =
 					RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
@@ -881,12 +879,8 @@ impl DefaultConfigurationValues for RelayChainCli {
 		30334
 	}
 
-	fn rpc_ws_listen_port() -> u16 {
+	fn rpc_listen_port() -> u16 {
 		9945
-	}
-
-	fn rpc_http_listen_port() -> u16 {
-		9934
 	}
 
 	fn prometheus_listen_port() -> u16 {
@@ -915,19 +909,11 @@ impl CliConfiguration<Self> for RelayChainCli {
 		Ok(self
 			.shared_params()
 			.base_path()?
-			.or_else(|| self.base_path.clone().map(Into::into)))
+			.or_else(|| Some(self.base_path.clone().into())))
 	}
 
-	fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_http(default_listen_port)
-	}
-
-	fn rpc_ipc(&self) -> Result<Option<String>> {
-		self.base.base.rpc_ipc()
-	}
-
-	fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-		self.base.base.rpc_ws(default_listen_port)
+	fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
+		self.base.base.rpc_addr(default_listen_port)
 	}
 
 	fn prometheus_config(
@@ -975,8 +961,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_methods()
 	}
 
-	fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-		self.base.base.rpc_ws_max_connections()
+	fn rpc_max_connections(&self) -> Result<u32> {
+		self.base.base.rpc_max_connections()
 	}
 
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {

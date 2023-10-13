@@ -25,8 +25,8 @@ use pallet_conviction_voting::{
 	VotingFor,
 };
 use pallet_evm::{AddressMapping, Log};
-use precompile_utils::{data::String, prelude::*};
-use sp_core::{H160, H256, U256};
+use precompile_utils::prelude::*;
+use sp_core::{Get, MaxEncodedLen, H160, H256, U256};
 use sp_runtime::traits::StaticLookup;
 use sp_std::marker::PhantomData;
 use sp_std::vec::Vec;
@@ -112,6 +112,14 @@ where
 	<Runtime as frame_system::Config>::RuntimeCall: From<ConvictionVotingCall<Runtime>>,
 	IndexOf<Runtime>: TryFrom<u32> + TryInto<u32>,
 	ClassOf<Runtime>: TryFrom<u16> + TryInto<u16>,
+	<Runtime as pallet_conviction_voting::Config>::Polls: Polling<
+		Tally<
+			<<Runtime as pallet_conviction_voting::Config>::Currency as Currency<
+				<Runtime as frame_system::Config>::AccountId,
+			>>::Balance,
+			<Runtime as pallet_conviction_voting::Config>::MaxTurnout,
+		>,
+	>,
 {
 	/// Internal helper function for vote* extrinsics exposed in this precompile.
 	fn vote(
@@ -125,7 +133,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(caller);
 		let call = ConvictionVotingCall::<Runtime>::vote { poll_index, vote }.into();
 
-		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call)?;
+		<RuntimeHelper<Runtime>>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 
@@ -255,10 +263,7 @@ where
 					handle.context().address,
 					SELECTOR_LOG_VOTE_REMOVED_FOR_TRACK,
 					H256::from_low_u64_be(poll_index as u64),
-					EvmDataWriter::new()
-						.write::<u16>(track_id)
-						.write::<Address>(Address(caller))
-						.build(),
+					solidity::encode_event_data((track_id, Address(caller))),
 				),
 				Some(Self::u16_to_track_id(track_id).in_field("trackId")?),
 			)
@@ -273,9 +278,7 @@ where
 					handle.context().address,
 					SELECTOR_LOG_VOTE_REMOVED,
 					H256::from_low_u64_be(poll_index as u64),
-					EvmDataWriter::new()
-						.write::<Address>(Address(caller))
-						.build(),
+					solidity::encode_event_data(Address(caller)),
 				),
 				None,
 			)
@@ -284,7 +287,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(caller);
 		let call = ConvictionVotingCall::<Runtime>::remove_vote { class, index };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 
@@ -304,11 +307,7 @@ where
 			handle.context().address,
 			SELECTOR_LOG_VOTE_REMOVED_OTHER,
 			H256::from_low_u64_be(poll_index as u64), // poll index,
-			EvmDataWriter::new()
-				.write::<Address>(Address(caller))
-				.write::<Address>(target)
-				.write::<u16>(track_id)
-				.build(),
+			solidity::encode_event_data((Address(caller), target, track_id)),
 		);
 		handle.record_log_costs(&[&event])?;
 
@@ -332,7 +331,7 @@ where
 			index,
 		};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 
@@ -353,12 +352,7 @@ where
 			handle.context().address,
 			SELECTOR_LOG_DELEGATED,
 			H256::from_low_u64_be(track_id as u64), // track id,
-			EvmDataWriter::new()
-				.write::<Address>(Address(caller))
-				.write::<Address>(representative)
-				.write::<U256>(amount)
-				.write::<u8>(conviction)
-				.build(),
+			solidity::encode_event_data((Address(caller), representative, amount, conviction)),
 		);
 		handle.record_log_costs(&[&event])?;
 
@@ -382,7 +376,12 @@ where
 			balance: amount,
 		};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(
+			handle,
+			Some(origin).into(),
+			call,
+			SYSTEM_ACCOUNT_SIZE,
+		)?;
 
 		event.record(handle)?;
 
@@ -397,9 +396,7 @@ where
 			handle.context().address,
 			SELECTOR_LOG_UNDELEGATED,
 			H256::from_low_u64_be(track_id as u64), // track id,
-			EvmDataWriter::new()
-				.write::<Address>(Address(caller))
-				.build(),
+			solidity::encode_event_data(Address(caller)),
 		);
 		handle.record_log_costs(&[&event])?;
 
@@ -407,7 +404,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(caller);
 		let call = ConvictionVotingCall::<Runtime>::undelegate { class };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 
@@ -422,7 +419,7 @@ where
 			handle.context().address,
 			SELECTOR_LOG_UNLOCKED,
 			H256::from_low_u64_be(track_id as u64), // track id,
-			EvmDataWriter::new().write::<Address>(target).build(),
+			solidity::encode_event_data(target),
 		);
 		handle.record_log_costs(&[&event])?;
 
@@ -439,7 +436,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = ConvictionVotingCall::<Runtime>::unlock { class, target };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		event.record(handle)?;
 
@@ -453,7 +450,8 @@ where
 		who: Address,
 		track_id: u16,
 	) -> EvmResult<OutputVotingFor> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// VotingFor: Twox64Concat(8) + 20 + Twox64Concat(8) + TransInfo::Id(2) + VotingOf
+		handle.record_db_read::<Runtime>(38 + VotingOf::<Runtime>::max_encoded_len())?;
 
 		let who = Runtime::AddressMapping::into_account_id(who.into());
 		let class = Self::u16_to_track_id(track_id).in_field("trackId")?;
@@ -469,7 +467,18 @@ where
 		handle: &mut impl PrecompileHandle,
 		who: Address,
 	) -> EvmResult<Vec<OutputClassLock>> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// ClassLocksFor: Twox64Concat(8) + 20 + BoundedVec(TransInfo::Id(2) * ClassCountOf)
+		handle.record_db_read::<Runtime>(
+			28 + ((2 * frame_support::traits::ClassCountOf::<
+				<Runtime as pallet_conviction_voting::Config>::Polls,
+				Tally<
+					<<Runtime as pallet_conviction_voting::Config>::Currency as Currency<
+						<Runtime as frame_system::Config>::AccountId,
+					>>::Balance,
+					<Runtime as pallet_conviction_voting::Config>::MaxTurnout,
+				>,
+			>::get()) as usize),
+		)?;
 
 		let who = Runtime::AddressMapping::into_account_id(who.into());
 
@@ -527,12 +536,12 @@ where
 					contract_addr,
 					SELECTOR_LOG_VOTED,
 					H256::from_low_u64_be(poll_index as u64),
-					EvmDataWriter::new()
-						.write::<Address>(Address(caller))
-						.write::<bool>(vote.aye)
-						.write::<U256>(balance)
-						.write::<u8>(vote.conviction.into())
-						.build(),
+					solidity::encode_event_data((
+						Address(caller),
+						vote.aye,
+						balance,
+						u8::from(vote.conviction),
+					)),
 				);
 				(
 					AccountVote::Standard {
@@ -547,11 +556,7 @@ where
 					contract_addr,
 					SELECTOR_LOG_VOTE_SPLIT,
 					H256::from_low_u64_be(poll_index as u64),
-					EvmDataWriter::new()
-						.write::<Address>(Address(caller))
-						.write::<U256>(aye)
-						.write::<U256>(nay)
-						.build(),
+					solidity::encode_event_data((Address(caller), aye, nay)),
 				);
 				(
 					AccountVote::Split {
@@ -566,12 +571,7 @@ where
 					contract_addr,
 					SELECTOR_LOG_VOTE_SPLIT_ABSTAINED,
 					H256::from_low_u64_be(poll_index as u64),
-					EvmDataWriter::new()
-						.write::<Address>(Address(caller))
-						.write::<U256>(aye)
-						.write::<U256>(nay)
-						.write::<U256>(abstain)
-						.build(),
+					solidity::encode_event_data((Address(caller), aye, nay, abstain)),
 				);
 				(
 					AccountVote::SplitAbstain {
@@ -679,13 +679,13 @@ where
 	}
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputClassLock {
 	track: u16,
 	amount: U256,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputVotingFor {
 	is_casting: bool,
 	is_delegating: bool,
@@ -693,20 +693,20 @@ pub struct OutputVotingFor {
 	delegating: OutputDelegating,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputCasting {
 	votes: Vec<PollAccountVote>,
 	delegations: Delegations,
 	prior: PriorLock,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct PollAccountVote {
 	poll_index: u32,
 	account_vote: OutputAccountVote,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputDelegating {
 	balance: U256,
 	target: Address,
@@ -715,7 +715,7 @@ pub struct OutputDelegating {
 	prior: PriorLock,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputAccountVote {
 	is_standard: bool,
 	is_split: bool,
@@ -725,38 +725,38 @@ pub struct OutputAccountVote {
 	split_abstain: SplitAbstainVote,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct StandardVote {
 	vote: OutputVote,
 	balance: U256,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct OutputVote {
 	aye: bool,
 	conviction: u8,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct SplitVote {
 	aye: U256,
 	nay: U256,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct SplitAbstainVote {
 	aye: U256,
 	nay: U256,
 	abstain: U256,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct Delegations {
 	votes: U256,
 	capital: U256,
 }
 
-#[derive(Default, EvmData)]
+#[derive(Default, solidity::Codec)]
 pub struct PriorLock {
 	balance: U256,
 }

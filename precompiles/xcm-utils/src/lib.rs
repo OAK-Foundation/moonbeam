@@ -26,9 +26,9 @@ use frame_support::{
 	traits::OriginTrait,
 };
 use pallet_evm::AddressMapping;
-use parity_scale_codec::DecodeLimit;
+use parity_scale_codec::{DecodeLimit, MaxEncodedLen};
 use precompile_utils::precompile_set::SelectorFilter;
-use precompile_utils::{data::String, prelude::*};
+use precompile_utils::prelude::*;
 use sp_core::{H160, U256};
 use sp_std::boxed::Box;
 use sp_std::marker::PhantomData;
@@ -106,9 +106,9 @@ where
 		handle: &mut impl PrecompileHandle,
 		multilocation: MultiLocation,
 	) -> EvmResult<Address> {
-		// TODO: Change once precompiles are benchmarked
-		// for now we charge a db read,
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// storage item: AssetTypeUnitsPerSecond
+		// max encoded len: hash (16) + Multilocation + u128 (16)
+		handle.record_db_read::<Runtime>(32 + MultiLocation::max_encoded_len())?;
 
 		let origin =
 			XcmConfig::OriginConverter::convert_origin(multilocation, OriginKind::SovereignAccount)
@@ -132,9 +132,9 @@ where
 		handle: &mut impl PrecompileHandle,
 		multilocation: MultiLocation,
 	) -> EvmResult<U256> {
-		// TODO: Change once precompiles are benchmarked
-		// for now we charge a db read,
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// storage item: AssetTypeUnitsPerSecond
+		// max encoded len: hash (16) + Multilocation + u128 (16)
+		handle.record_db_read::<Runtime>(32 + MultiLocation::max_encoded_len())?;
 
 		// We will construct an asset with the max amount, and check how much we
 		// get in return to substract
@@ -216,7 +216,7 @@ where
 			max_weight: Weight::from_parts(weight, DEFAULT_PROOF_SIZE),
 		};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -243,7 +243,7 @@ where
 			message: Box::new(xcm),
 		};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

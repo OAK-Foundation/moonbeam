@@ -54,7 +54,7 @@ construct_runtime!(
 
 parameter_types! {
 	pub const BlockHashCount: u32 = 250;
-	pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+	pub const MaximumBlockWeight: Weight = Weight::from_parts(1024, 1);
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 	pub const SS58Prefix: u8 = 42;
@@ -86,7 +86,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 1;
+	pub const ExistentialDeposit: u128 = 0;
 }
 impl pallet_balances::Config for Test {
 	type MaxReserves = ();
@@ -98,6 +98,10 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
 	type WeightInfo = ();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 const GENESIS_BLOCKS_PER_ROUND: u32 = 5;
@@ -117,9 +121,9 @@ parameter_types! {
 	pub const MaxTopDelegationsPerCandidate: u32 = 4;
 	pub const MaxBottomDelegationsPerCandidate: u32 = 4;
 	pub const MaxDelegationsPerDelegator: u32 = 4;
-	pub const MinCollatorStk: u128 = 10;
-	pub const MinDelegatorStk: u128 = 5;
+	pub const MinCandidateStk: u128 = 10;
 	pub const MinDelegation: u128 = 3;
+	pub const MaxCandidates: u32 = 200;
 }
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -136,15 +140,14 @@ impl Config for Test {
 	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
 	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
 	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
-	type MinCollatorStk = MinCollatorStk;
-	type MinCandidateStk = MinCollatorStk;
-	type MinDelegatorStk = MinDelegatorStk;
+	type MinCandidateStk = MinCandidateStk;
 	type MinDelegation = MinDelegation;
 	type OnCollatorPayout = ();
 	type PayoutCollatorReward = ();
 	type OnNewRound = ();
 	type AdditionalIssuance = ();
 	type WeightInfo = ();
+	type MaxCandidates = MaxCandidates;
 }
 
 pub(crate) struct ExtBuilder {

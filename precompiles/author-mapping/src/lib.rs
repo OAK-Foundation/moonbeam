@@ -78,7 +78,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = AuthorMappingCall::<Runtime>::add_association { nimbus_id };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -104,7 +104,7 @@ where
 			new_nimbus_id,
 		};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -122,7 +122,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = AuthorMappingCall::<Runtime>::clear_association { nimbus_id };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -138,7 +138,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = AuthorMappingCall::<Runtime>::remove_keys {};
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -152,7 +152,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let call = AuthorMappingCall::<Runtime>::set_keys { keys: keys.into() };
 
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -160,7 +160,9 @@ where
 	#[precompile::public("nimbusIdOf(address)")]
 	#[precompile::view]
 	fn nimbus_id_of(handle: &mut impl PrecompileHandle, address: Address) -> EvmResult<H256> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Storage item: NimbusLookup:
+		// Blake2_128(16) + AccountId(20) + NimbusId(32)
+		handle.record_db_read::<Runtime>(68)?;
 		let account = Runtime::AddressMapping::into_account_id(address.0);
 
 		let nimbus_id = pallet_author_mapping::Pallet::<Runtime>::nimbus_id_of(&account)
@@ -172,7 +174,9 @@ where
 	#[precompile::public("addressOf(bytes32)")]
 	#[precompile::view]
 	fn address_of(handle: &mut impl PrecompileHandle, nimbus_id: H256) -> EvmResult<Address> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Storage item: MappingWithDeposit:
+		// Blake2_128(16) + NimbusId(32) + RegistrationInfo(20 + 16 + VrfId(32))
+		handle.record_db_read::<Runtime>(116)?;
 
 		let nimbus_id = sp_core::sr25519::Public::unchecked_from(nimbus_id);
 		let nimbus_id: NimbusId = nimbus_id.into();
@@ -187,7 +191,9 @@ where
 	#[precompile::public("keysOf(bytes32)")]
 	#[precompile::view]
 	fn keys_of(handle: &mut impl PrecompileHandle, nimbus_id: H256) -> EvmResult<UnboundedBytes> {
-		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
+		// Storage item: MappingWithDeposit:
+		// Blake2_128(16) + NimbusId(32) + RegistrationInfo(20 + 16 + VrfId(32))
+		handle.record_db_read::<Runtime>(116)?;
 
 		let nimbus_id = sp_core::sr25519::Public::unchecked_from(nimbus_id);
 		let nimbus_id: NimbusId = nimbus_id.into();

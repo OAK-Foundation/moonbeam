@@ -4,3 +4,9 @@ tmp/*
 
 moonbeam
 polkadot
+
+*spec.json
+html
+
+contracts/cache
+contracts/out
